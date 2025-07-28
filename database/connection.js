@@ -1,4 +1,3 @@
-
 const { createClient } = require('@libsql/client');
 
 const client = createClient({
@@ -11,28 +10,31 @@ async function initDatabase() {
   try {
     // Create properties table
     await client.execute(`
-      CREATE TABLE IF NOT EXISTS properties (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        address TEXT NOT NULL,
-        zip TEXT NOT NULL,
-        property_type TEXT NOT NULL,
-        units INTEGER,
-        sqft INTEGER,
-        lot_size INTEGER,
-        price INTEGER,
-        zoning TEXT,
-        distress_status TEXT,
-        tenure TEXT,
-        distance_from_hnl REAL,
-        str_revenue INTEGER,
-        str_roi REAL,
-        owner_name TEXT,
-        owner_contact TEXT,
-        photos TEXT,
-        source TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+    CREATE TABLE IF NOT EXISTS properties (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      address TEXT NOT NULL,
+      zip TEXT NOT NULL,
+      property_type TEXT NOT NULL,
+      units INTEGER,
+      sqft INTEGER,
+      lot_size INTEGER,
+      price INTEGER,
+      zoning TEXT,
+      distress_status TEXT,
+      tenure TEXT,
+      distance_from_hnl REAL,
+      str_revenue INTEGER,
+      str_roi REAL,
+      owner_name TEXT,
+      owner_contact TEXT,
+      photos TEXT,
+      source TEXT,
+      ai_analysis TEXT,
+      raw_data TEXT,
+      analyzed_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
     // Create leads table
     await client.execute(`

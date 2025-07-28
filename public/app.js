@@ -1,6 +1,7 @@
 
 // Global variables
 let currentProperties = [];
+let scrapingInProgress = false;
 
 // Scraping functions
 async function scrapeHawaiiProperties() {
@@ -108,28 +109,45 @@ function displayProperties(properties) {
         return;
     }
 
-    propertiesList.innerHTML = properties.map(property => `
+    propertiesList.innerHTML = properties.map(property => {
+        const aiAnalysis = property.ai_analysis ? JSON.parse(property.ai_analysis) : null;
+        
+        return `
         <div class="col-md-6 col-lg-4">
             <div class="property-card">
                 <div class="card-body">
                     <h5 class="card-title">${property.address}</h5>
                     <p class="card-text">
-                        <strong>Price:</strong> $${Number(property.price).toLocaleString()}<br>
-                        <strong>Type:</strong> ${property.property_type}<br>
+                        <strong>Price:</strong> $${Number(property.price || 0).toLocaleString()}<br>
+                        <strong>Type:</strong> ${property.property_type || 'N/A'}<br>
                         <strong>Sqft:</strong> ${property.sqft ? Number(property.sqft).toLocaleString() : 'N/A'}<br>
                         <strong>Zoning:</strong> ${property.zoning || 'N/A'}<br>
-                        <strong>Status:</strong> ${property.distress_status || 'N/A'}
+                        <strong>Status:</strong> ${property.distress_status || 'N/A'}<br>
+                        <strong>Source:</strong> ${property.source || 'N/A'}
                     </p>
+                    
                     ${property.str_roi ? `<span class="roi-badge">ROI: ${property.str_roi.toFixed(1)}%</span>` : ''}
+                    
+                    ${aiAnalysis ? `
+                        <div class="ai-analysis mt-2">
+                            <span class="badge bg-info">AI Score: ${aiAnalysis.opportunity_score || 'N/A'}/100</span>
+                            ${aiAnalysis.estimated_roi ? `<span class="badge bg-success ms-1">Est. ROI: ${aiAnalysis.estimated_roi}%</span>` : ''}
+                        </div>
+                        <small class="text-muted">${aiAnalysis.ai_insights || ''}</small>
+                    ` : ''}
+                    
                     <div class="mt-3">
                         <button class="btn btn-sm btn-success" onclick="openROICalculator(${property.id})">Calculate ROI</button>
                         <button class="btn btn-sm btn-primary" onclick="addToLeads(${property.id})">Add to Leads</button>
+                        ${aiAnalysis ? `<button class="btn btn-sm btn-info" onclick="generatePropertyReport(${property.id})">📊 AI Report</button>` : ''}
                     </div>
+                    
                     ${property.owner_contact ? `<small class="text-muted d-block mt-2">Owner: ${property.owner_name} - ${property.owner_contact}</small>` : ''}
                 </div>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // Open ROI calculator modal
@@ -196,6 +214,161 @@ async function addToLeads(propertyId) {
         if (response.ok) {
             alert('Property added to leads successfully!');
         } else {
+
+
+// Scrape Hawaii properties with AI analysis
+async function scrapeHawaiiProperties() {
+    if (scrapingInProgress) {
+        alert('Scraping already in progress. Please wait...');
+        return;
+    }
+    
+    scrapingInProgress = true;
+    const scrapeBtn = document.getElementById('scrapeBtn');
+    const statusDiv = document.getElementById('scrapingStatus');
+    
+    scrapeBtn.disabled = true;
+    scrapeBtn.innerHTML = '🔄 Scraping...';
+    statusDiv.innerHTML = '<div class="text-info">Analyzing Hawaii properties from multiple sources...</div>';
+    
+    try {
+        const response = await fetch('/api/scraper/scrape-hawaii', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            statusDiv.innerHTML = `<div class="text-success">✅ ${result.message}</div>`;
+            // Refresh the properties list
+            searchProperties();
+        } else {
+            statusDiv.innerHTML = `<div class="text-danger">❌ Error: ${result.error}</div>`;
+        }
+        
+    } catch (error) {
+        console.error('Scraping error:', error);
+        statusDiv.innerHTML = '<div class="text-danger">❌ Failed to scrape properties</div>';
+    } finally {
+        scrapingInProgress = false;
+        scrapeBtn.disabled = false;
+        scrapeBtn.innerHTML = '🌺 Scrape Hawaii Properties';
+    }
+}
+
+// Get scraping statistics
+async function getScrapingStats() {
+    try {
+        const response = await fetch('/api/scraper/stats');
+        const stats = await response.json();
+        
+        let statsHtml = '<strong>Scraping Statistics:</strong><br>';
+        stats.forEach(stat => {
+            statsHtml += `${stat.source}: ${stat.count} properties (${(stat.analysis_rate * 100).toFixed(0)}% analyzed)<br>`;
+        });
+        
+        document.getElementById('scrapingStatus').innerHTML = statsHtml;
+    } catch (error) {
+        console.error('Error fetching stats:', error);
+    }
+}
+
+// Generate detailed AI report for a property
+async function generatePropertyReport(propertyId) {
+    try {
+        const response = await fetch(`/api/scraper/generate-report/${propertyId}`, {
+            method: 'POST'
+        });
+        
+        const report = await response.json();
+        
+        // Display report in a modal or new window
+        showPropertyReport(report);
+        
+    } catch (error) {
+        console.error('Error generating report:', error);
+        alert('Failed to generate property report');
+    }
+}
+
+// Display property report
+function showPropertyReport(report) {
+    const reportContent = `
+        <div class="property-report">
+            <h3>🏠 Property Investment Report</h3>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Property Summary</h5>
+                    <p><strong>Address:</strong> ${report.property_summary.address}</p>
+                    <p><strong>Price:</strong> $${Number(report.property_summary.price || 0).toLocaleString()}</p>
+                    <p><strong>Type:</strong> ${report.property_summary.type}</p>
+                    <p><strong>Status:</strong> ${report.property_summary.status || 'N/A'}</p>
+                </div>
+                
+                <div class="col-md-6">
+                    <h5>AI Investment Analysis</h5>
+                    <p><strong>Opportunity Score:</strong> ${report.investment_analysis.opportunity_score}/100</p>
+                    <p><strong>Estimated ROI:</strong> ${report.investment_analysis.estimated_roi}%</p>
+                    <p><strong>Investment Score:</strong> ${report.investment_analysis.investment_score}/100</p>
+                </div>
+            </div>
+            
+            <div class="mt-3">
+                <h5>Market Insights</h5>
+                <p>${report.market_insights}</p>
+                
+                <h5>AI Recommendations</h5>
+                <p>${report.ai_recommendations}</p>
+                
+                ${report.risk_assessment.length > 0 ? `
+                    <h5>Risk Factors</h5>
+                    <ul>
+                        ${report.risk_assessment.map(risk => `<li>${risk}</li>`).join('')}
+                    </ul>
+                ` : ''}
+                
+                <small class="text-muted">
+                    Data Source: ${report.data_sources} | Last Updated: ${new Date(report.last_updated).toLocaleString()}
+                </small>
+            </div>
+        </div>
+    `;
+    
+    // Create and show modal
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.innerHTML = `
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">AI Property Analysis Report</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    ${reportContent}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="window.print()">Print Report</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    // Remove modal from DOM when closed
+    modal.addEventListener('hidden.bs.modal', () => {
+        modal.remove();
+    });
+}
+
             throw new Error('Failed to add lead');
         }
     } catch (error) {

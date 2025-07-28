@@ -98,3 +98,353 @@ router.get('/stats', async (req, res) => {
 });
 
 module.exports = router;
+const express = require('express');
+const router = express.Router();
+const puppeteer = require('puppeteer');
+const cheerio = require('cheerio');
+const axios = require('axios');
+const client = require('../database/connection');
+
+// Scrape properties from multiple sources
+router.post('/scrape-hawaii', async (req, res) => {
+  try {
+    console.log('Starting Hawaii property scraping...');
+    let scrapedProperties = [];
+    
+    // Scrape Foreclosure.com
+    const foreclosureProperties = await scrapeForeclosureDotCom();
+    scrapedProperties = [...scrapedProperties, ...foreclosureProperties];
+    
+    // Scrape OahuRE.com
+    const oahuProperties = await scrapeOahuRE();
+    scrapedProperties = [...scrapedProperties, ...oahuProperties];
+    
+    // AI Analysis for each property
+    const analyzedProperties = await Promise.all(
+      scrapedProperties.map(property => analyzePropertyWithAI(property))
+    );
+    
+    // Save to database
+    let savedCount = 0;
+    for (const property of analyzedProperties) {
+      try {
+        await savePropertyToDatabase(property);
+        savedCount++;
+      } catch (error) {
+        console.error('Error saving property:', error);
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Scraped and analyzed ${scrapedProperties.length} properties, saved ${savedCount}`,
+      properties: analyzedProperties
+    });
+    
+  } catch (error) {
+    console.error('Scraping error:', error);
+    res.status(500).json({ error: 'Failed to scrape properties' });
+  }
+});
+
+// Scrape Foreclosure.com for distressed properties
+async function scrapeForeclosureDotCom() {
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+  const properties = [];
+  
+  try {
+    // Navigate to Foreclosure.com Hawaii listings
+    await page.goto('https://www.foreclosure.com/listing/search.html?state=HI', {
+      waitUntil: 'networkidle0'
+    });
+    
+    // Wait for listings to load
+    await page.waitForSelector('.property-item', { timeout: 10000 });
+    
+    const listings = await page.evaluate(() => {
+      const items = document.querySelectorAll('.property-item');
+      return Array.from(items).slice(0, 20).map(item => {
+        const address = item.querySelector('.address')?.textContent?.trim() || '';
+        const price = item.querySelector('.price')?.textContent?.trim() || '';
+        const details = item.querySelector('.details')?.textContent?.trim() || '';
+        const link = item.querySelector('a')?.href || '';
+        
+        return { address, price, details, link, source: 'Foreclosure.com' };
+      });
+    });
+    
+    for (const listing of listings) {
+      if (listing.address.includes('HI') && listing.price) {
+        properties.push({
+          address: listing.address,
+          price: parsePrice(listing.price),
+          property_type: inferPropertyType(listing.details),
+          distress_status: 'Foreclosure',
+          source: 'Foreclosure.com',
+          raw_data: listing
+        });
+      }
+    }
+    
+  } catch (error) {
+    console.error('Error scraping Foreclosure.com:', error);
+  } finally {
+    await browser.close();
+  }
+  
+  return properties;
+}
+
+// Scrape OahuRE.com for local listings
+async function scrapeOahuRE() {
+  const properties = [];
+  
+  try {
+    const response = await axios.get('https://www.oahure.com/listings', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    const $ = cheerio.load(response.data);
+    
+    $('.property-listing').each((index, element) => {
+      if (index < 20) { // Limit to 20 properties
+        const address = $(element).find('.property-address').text().trim();
+        const price = $(element).find('.property-price').text().trim();
+        const type = $(element).find('.property-type').text().trim();
+        const description = $(element).find('.property-description').text().trim();
+        
+        if (address && price) {
+          properties.push({
+            address,
+            price: parsePrice(price),
+            property_type: type || inferPropertyType(description),
+            distress_status: inferDistressStatus(description),
+            source: 'OahuRE.com',
+            raw_data: { address, price, type, description }
+          });
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error scraping OahuRE.com:', error);
+  }
+  
+  return properties;
+}
+
+// AI Analysis function to enhance property data
+async function analyzePropertyWithAI(property) {
+  try {
+    // Simulate AI analysis - in production, you'd use OpenAI API or similar
+    const analysis = {
+      investment_score: Math.floor(Math.random() * 100),
+      estimated_roi: (Math.random() * 15 + 2).toFixed(1),
+      market_trends: generateMarketAnalysis(property),
+      risk_factors: identifyRiskFactors(property),
+      opportunity_score: calculateOpportunityScore(property),
+      ai_insights: generateAIInsights(property)
+    };
+    
+    return {
+      ...property,
+      ai_analysis: analysis,
+      analyzed_at: new Date().toISOString()
+    };
+    
+  } catch (error) {
+    console.error('AI analysis error:', error);
+    return property;
+  }
+}
+
+// Generate market analysis insights
+function generateMarketAnalysis(property) {
+  const trends = [
+    'Honolulu real estate showing strong appreciation trends',
+    'Tourism recovery driving rental demand',
+    'Limited inventory creating seller\'s market',
+    'Interest rates affecting buyer purchasing power'
+  ];
+  
+  return trends[Math.floor(Math.random() * trends.length)];
+}
+
+// Identify potential risk factors
+function identifyRiskFactors(property) {
+  const risks = [];
+  
+  if (property.distress_status === 'Foreclosure') {
+    risks.push('Property in foreclosure - potential title issues');
+  }
+  
+  if (property.price && property.price < 400000) {
+    risks.push('Below market price - investigate condition');
+  }
+  
+  if (property.address.includes('flood')) {
+    risks.push('Potential flood zone - check insurance requirements');
+  }
+  
+  return risks;
+}
+
+// Calculate opportunity score based on various factors
+function calculateOpportunityScore(property) {
+  let score = 50; // Base score
+  
+  if (property.distress_status) score += 20;
+  if (property.source === 'Foreclosure.com') score += 15;
+  if (property.price && property.price < 800000) score += 10;
+  
+  return Math.min(score, 100);
+}
+
+// Generate AI-powered insights
+function generateAIInsights(property) {
+  const insights = [
+    `Property appears to be ${property.distress_status || 'standard'} sale with potential for immediate equity`,
+    'Location analysis suggests strong rental potential based on proximity to tourist areas',
+    'Market comparables indicate this property may be undervalued',
+    'Investment opportunity with estimated cash flow positive potential'
+  ];
+  
+  return insights[Math.floor(Math.random() * insights.length)];
+}
+
+// Helper functions
+function parsePrice(priceStr) {
+  if (!priceStr) return null;
+  const cleanPrice = priceStr.replace(/[$,]/g, '');
+  const price = parseInt(cleanPrice);
+  return isNaN(price) ? null : price;
+}
+
+function inferPropertyType(details) {
+  if (!details) return 'Unknown';
+  const lower = details.toLowerCase();
+  if (lower.includes('condo')) return 'Condo';
+  if (lower.includes('single')) return 'Single-family';
+  if (lower.includes('multi')) return 'Multi-family';
+  if (lower.includes('land')) return 'Land';
+  return 'Unknown';
+}
+
+function inferDistressStatus(description) {
+  if (!description) return null;
+  const lower = description.toLowerCase();
+  if (lower.includes('foreclosure')) return 'Foreclosure';
+  if (lower.includes('short sale')) return 'Short Sale';
+  if (lower.includes('estate')) return 'Estate Sale';
+  if (lower.includes('vacant')) return 'Vacant';
+  return null;
+}
+
+async function savePropertyToDatabase(property) {
+  const existingProperty = await client.execute({
+    sql: 'SELECT id FROM properties WHERE address = ?',
+    args: [property.address]
+  });
+  
+  if (existingProperty.rows.length > 0) {
+    // Update existing property with AI analysis
+    await client.execute({
+      sql: `UPDATE properties SET 
+        ai_analysis = ?, 
+        analyzed_at = CURRENT_TIMESTAMP,
+        source = ?
+        WHERE address = ?`,
+      args: [
+        JSON.stringify(property.ai_analysis),
+        property.source,
+        property.address
+      ]
+    });
+  } else {
+    // Insert new property
+    await client.execute({
+      sql: `INSERT INTO properties (
+        address, price, property_type, distress_status, source,
+        ai_analysis, raw_data, analyzed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      args: [
+        property.address,
+        property.price,
+        property.property_type,
+        property.distress_status,
+        property.source,
+        JSON.stringify(property.ai_analysis),
+        JSON.stringify(property.raw_data)
+      ]
+    });
+  }
+}
+
+// Get scraping statistics
+router.get('/stats', async (req, res) => {
+  try {
+    const stats = await client.execute(`
+      SELECT 
+        source,
+        COUNT(*) as count,
+        AVG(CASE WHEN ai_analysis IS NOT NULL THEN 1 ELSE 0 END) as analysis_rate,
+        MAX(analyzed_at) as last_analysis
+      FROM properties 
+      WHERE source IN ('Foreclosure.com', 'OahuRE.com')
+      GROUP BY source
+    `);
+    
+    res.json(stats.rows);
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+// Generate AI report for specific property
+router.post('/generate-report/:id', async (req, res) => {
+  try {
+    const propertyResult = await client.execute({
+      sql: 'SELECT * FROM properties WHERE id = ?',
+      args: [req.params.id]
+    });
+    
+    if (propertyResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Property not found' });
+    }
+    
+    const property = propertyResult.rows[0];
+    const report = generateDetailedReport(property);
+    
+    res.json(report);
+  } catch (error) {
+    console.error('Error generating report:', error);
+    res.status(500).json({ error: 'Failed to generate report' });
+  }
+});
+
+function generateDetailedReport(property) {
+  return {
+    property_summary: {
+      address: property.address,
+      price: property.price,
+      type: property.property_type,
+      status: property.distress_status
+    },
+    investment_analysis: {
+      opportunity_score: JSON.parse(property.ai_analysis || '{}').opportunity_score || 'N/A',
+      estimated_roi: JSON.parse(property.ai_analysis || '{}').estimated_roi || 'N/A',
+      investment_score: JSON.parse(property.ai_analysis || '{}').investment_score || 'N/A'
+    },
+    market_insights: JSON.parse(property.ai_analysis || '{}').market_trends || 'No analysis available',
+    risk_assessment: JSON.parse(property.ai_analysis || '{}').risk_factors || [],
+    ai_recommendations: JSON.parse(property.ai_analysis || '{}').ai_insights || 'No insights available',
+    data_sources: property.source,
+    last_updated: property.analyzed_at
+  };
+}
+
+module.exports = router;
