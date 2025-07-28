@@ -1,0 +1,25 @@
+Step 5: Develop the Web App Here’s a high-level implementation plan with key components.
+5.1: Backend (Node.js/Express)
+•  Setup: Initialize a Node.js project with Express and MongoDB, installing necessary dependencies like express, mongoose, dotenv, cors, puppeteer, pdfkit, and nodemailer.
+•  Server: Create a server file to handle API endpoints, enabling CORS, JSON parsing, and MongoDB connection. Define routes for properties and leads, running the server on a specified port (e.g., 5000).
+•  Property Schema: Define a MongoDB schema for properties, including fields like address, zip code, property type, units, square footage, lot size, price, zoning, distress status, tenure, distance from HNL, STR revenue, ROI, owner details, photos, source, and creation date.
+•  API Endpoints: Create routes for searching properties with filters (zip, property type, price, zoning, distress status, distance) and adding new properties (e.g., from driving for dollars). Calculate distance from HNL for new entries.
+•  Geolocation: Use Google Maps API to calculate distance from HNL for each property, converting meters to miles for filtering within 5 miles.
+5.2: Data Ingestion
+•  Public Records Scraping: Use Puppeteer to scrape Honolulu’s Real Property Assessment site for tax delinquencies, extracting address, zip, property type, assessed value, and delinquency status. Ensure compliance with the site’s terms of service.
+•  API Integration: Fetch distressed properties from PropStream API, filtering for zip codes (e.g., 96814), property type (multi-family), and status (pre-foreclosure). Map data to your schema (address, zip, type, price, distress status).
+•  Manual Input: Allow users to add properties via a form (e.g., from driving for dollars), saving to MongoDB with calculated distance from HNL.
+5.3: Zoning Filter
+•  Fetch Zoning Data: Query Honolulu GIS or geodata.hawaii.gov for zoning classification (e.g., BMX-3, A-2, X-2) based on address, returning the zoning code for filtering.
+•  Filter BMX-3: Enable querying for BMX-3 properties in the search endpoint, with a dropdown for other zones (A-2, X-2, R-5) populated from GIS data.
+5.4: ROI Calculator
+•  Estimate STR ROI: Calculate revenue based on property type, units, and zip code (e.g., $150/night for 96814 multi-family, 75% occupancy). Include costs like taxes (0.35% of price), maintenance ($250/month/unit), insurance ($1500/year/unit), management (25% of revenue), and upgrades ($10,000 amortized). Compute NOI and ROI, integrating into property details API.
+5.5: Frontend (React.js)
+•  Setup: Create a React app, installing dependencies like axios, react-router-dom, and tailwindcss for UI and API requests.
+•  Search Component: Build a search bar with inputs for zip code, property type (single-family, multi-family, condo, commercial, land), max price, zoning, distress status, and max distance from HNL. Send filter parameters to the backend API and display results.
+•  Property List: Display search results with details like address, type, zoning, price, distress status, distance from HNL, ROI, and photos (if available). Include a button to save leads.
+•  Main App: Combine search and list components in a main app, styled with Tailwind CSS, with a header like “Honolulu Off-Market Property Finder.”
+5.6: Lead Management and Export
+•  Save Lead: Create an endpoint to save leads with property ID, investor email, and notes, storing in MongoDB.
+•  Export PDF: Generate a property report PDF with address, type, zoning, price, distress status, and ROI using pdfkit.
+•  Email Lead: Use nodemailer to send the PDF to investors, including a brief pitch (e.g., “Off-market deal in Honolulu”).
