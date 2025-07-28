@@ -1,33 +1,71 @@
-# LlamaIndex Summarization: Getting Started Guide
-Welcome to the LlamaIndex Summarization Replit Template! This template provides you with essential steps and information to get started in building Summarization tool with LlamaIndex.
 
-# About LlamaIndex
-LlamaIndex offers a versatile toolkit catering to both beginners and experts:
+# Honolulu Off-Market Property Finder
 
-**For Beginners:** Use our high-level API to ingest and query your data in just 5 lines of code.
+A web application for finding and analyzing off-market properties in Honolulu, Hawaii. Built with Node.js, Express, and Turso database.
 
-**For Advanced Users:** Our modular architecture allows customization and extensions. Dive into any module—whether data connectors, indices, retrievers, query engines, or reranking modules—to tailor them to your requirements.
+## Features
 
-# Resources
-**GitHub:** [LlamaIndex Repository](https://github.com/jerryjliu/llama_index/tree/main)
+- **Property Search & Filtering**: Search properties by zip code, type, price range, zoning, and distress status
+- **ROI Calculator**: Calculate return on investment for rental properties
+- **Lead Management**: Save interesting properties as leads with tags and notes
+- **Real Estate Investment Focus**: Specifically designed for Honolulu market analysis
 
-**Discord:** [Join Our Community](https://discord.gg/dGcwcsnxhU)
+## Technology Stack
 
-**Documentation:** [LlamaIndex Docs](https://gpt-index.readthedocs.io/)
+- **Backend**: Node.js with Express
+- **Database**: Turso (SQLite-compatible)
+- **Frontend**: Vanilla JavaScript with Bootstrap
+- **Additional**: PDF generation, email notifications
 
-**Twitter:** [Follow Us @LlamaIndex](https://twitter.com/llama_index)
+## Getting Started
 
-# Installation & Setup
-Follow these steps to set up your environment:
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
 
-## Set OpenAI API Key:
+2. **Environment Setup**:
+   - Copy `.env.example` to `.env`
+   - Add your Turso database credentials
 
-Set your OPENAI_API_KEY using Replit Secrets.
+3. **Initialize Sample Data**:
+   ```bash
+   node utils/sampleData.js
+   ```
 
-## Launch the App:
-Hit the run button.
+4. **Start the Server**:
+   ```bash
+   npm start
+   ```
 
-Once running, you can interact with the `Paul Grahm Essay` document through the app interface for Summarization purposes. For example: `Summarise Paul Graham experience with YC.`
+5. **Access the App**:
+   Open your browser to the provided URL
 
-## Deployment:
-Please use the "Reserved VM" option for now.
+## API Endpoints
+
+### Properties
+- `GET /api/properties` - Get all properties with optional filters
+- `GET /api/properties/:id` - Get single property
+- `POST /api/properties` - Add new property
+- `POST /api/properties/:id/calculate-roi` - Calculate ROI
+
+### Leads
+- `GET /api/leads` - Get all leads
+- `POST /api/leads` - Add property to leads
+- `PUT /api/leads/:id` - Update lead status
+
+## Database Schema
+
+### Properties Table
+- Basic info: address, zip, property_type, units, sqft, price
+- Investment data: zoning, distress_status, str_revenue, str_roi
+- Owner info: owner_name, owner_contact
+- Metadata: photos, source, created_at
+
+### Leads Table
+- Lead management: property_id, tag, notes, status
+- Tracking: created_at
+
+## Deployment
+
+This app is configured for Replit deployment with automatic HTTPS and custom domains available.

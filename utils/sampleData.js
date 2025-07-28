@@ -58,11 +58,50 @@ const sampleProperties = [
     owner_contact: "808-555-9999",
     photos: [],
     source: "Drive by"
+  },
+  {
+    address: "2468 King St, Honolulu, HI 96826",
+    zip: "96826",
+    property_type: "Multi-family",
+    units: 2,
+    sqft: 1800,
+    lot_size: 6000,
+    price: 950000,
+    zoning: "X-2",
+    distress_status: "Estate Sale",
+    tenure: "Fee Simple",
+    distance_from_hnl: 7.2,
+    str_revenue: 84000,
+    str_roi: 6.8,
+    owner_name: "Mary Wilson",
+    owner_contact: "808-555-2222",
+    photos: [],
+    source: "MLS"
+  },
+  {
+    address: "1357 Beretania St, Honolulu, HI 96813",
+    zip: "96813",
+    property_type: "Commercial",
+    units: null,
+    sqft: 4500,
+    lot_size: 8000,
+    price: 2200000,
+    zoning: "BMX-3",
+    distress_status: "Pre-foreclosure",
+    tenure: "Fee Simple",
+    distance_from_hnl: 6.5,
+    str_revenue: 180000,
+    str_roi: 5.9,
+    owner_name: "Pacific Holdings LLC",
+    owner_contact: "808-555-3333",
+    photos: [],
+    source: "Public Records"
   }
 ];
 
 async function insertSampleData() {
   try {
+    console.log('Inserting sample properties...');
     for (const property of sampleProperties) {
       await client.execute({
         sql: `INSERT INTO properties (
