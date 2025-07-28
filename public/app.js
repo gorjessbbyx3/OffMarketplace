@@ -2,6 +2,69 @@
 // Global variables
 let currentProperties = [];
 
+// Scraping functions
+async function scrapeHawaiiProperties() {
+    const btn = document.getElementById('scrapeBtn');
+    const status = document.getElementById('scrapingStatus');
+    
+    btn.disabled = true;
+    btn.innerHTML = '🔄 Scraping...';
+    status.innerHTML = 'Starting scraping process...';
+
+    try {
+        const response = await fetch('/api/scraper/scrape-hawaii', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            status.innerHTML = `✅ ${result.message}`;
+            alert(`Scraping Complete!\n\nTotal Scraped: ${result.total_scraped}\nNew Properties: ${result.new_properties}\nErrors: ${result.errors}`);
+            
+            // Refresh the property list
+            searchProperties();
+        } else {
+            status.innerHTML = `❌ Error: ${result.error}`;
+            alert(`Scraping failed: ${result.error}`);
+        }
+    } catch (error) {
+        console.error('Error during scraping:', error);
+        status.innerHTML = `❌ Network error occurred`;
+        alert('Network error during scraping. Please try again.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '🌺 Scrape Hawaii Properties';
+    }
+}
+
+async function getScrapingStats() {
+    try {
+        const response = await fetch('/api/scraper/stats');
+        const stats = await response.json();
+        
+        if (stats.scraped_sources && stats.scraped_sources.length > 0) {
+            let statsText = 'Scraped Property Statistics:\n\n';
+            stats.scraped_sources.forEach(source => {
+                statsText += `${source.source}:\n`;
+                statsText += `  Properties: ${source.count}\n`;
+                statsText += `  Avg Price: $${Math.round(source.avg_price).toLocaleString()}\n`;
+                statsText += `  Price Range: $${Math.round(source.min_price).toLocaleString()} - $${Math.round(source.max_price).toLocaleString()}\n\n`;
+            });
+            statsText += `Last Updated: ${new Date(stats.last_updated).toLocaleString()}`;
+            alert(statsText);
+        } else {
+            alert('No scraped properties found. Run the scraper first!');
+        }
+    } catch (error) {
+        console.error('Error getting stats:', error);
+        alert('Error loading scraping statistics.');
+    }
+}
+
 // Load properties on page load
 document.addEventListener('DOMContentLoaded', function() {
     searchProperties();
@@ -14,7 +77,8 @@ async function searchProperties() {
         property_type: document.getElementById('propertyType').value,
         max_price: document.getElementById('maxPrice').value,
         zoning: document.getElementById('zoning').value,
-        distress_status: document.getElementById('distressStatus').value
+        distress_status: document.getElementById('distressStatus').value,
+        source: document.getElementById('sourceFilter').value
     };
 
     // Remove empty filters

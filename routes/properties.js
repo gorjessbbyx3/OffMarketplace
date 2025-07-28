@@ -6,7 +6,7 @@ const client = require('../database/connection');
 // Get all properties with filters
 router.get('/', async (req, res) => {
   try {
-    const { zip, property_type, min_price, max_price, zoning, distress_status } = req.query;
+    const { zip, property_type, min_price, max_price, zoning, distress_status, source } = req.query;
     
     let query = 'SELECT * FROM properties WHERE 1=1';
     const params = [];
@@ -39,6 +39,11 @@ router.get('/', async (req, res) => {
     if (distress_status) {
       query += ' AND distress_status = ?';
       params.push(distress_status);
+    }
+    
+    if (source) {
+      query += ' AND source = ?';
+      params.push(source);
     }
     
     query += ' ORDER BY created_at DESC';

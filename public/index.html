@@ -32,6 +32,25 @@
     <div class="container mt-4">
         <h1 class="text-center mb-4">🏠 Honolulu Off-Market Property Finder</h1>
         
+        <!-- Scraping Controls -->
+        <div class="search-filters mb-3">
+            <h3>🔍 Hawaii Property Scraper</h3>
+            <p>Scrape fresh property data from Foreclosure.com and OahuRE.com</p>
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <button class="btn btn-success" onclick="scrapeHawaiiProperties()" id="scrapeBtn">
+                        🌺 Scrape Hawaii Properties
+                    </button>
+                    <button class="btn btn-info ms-2" onclick="getScrapingStats()">
+                        📊 View Stats
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <div id="scrapingStatus" class="text-muted"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Search Filters -->
         <div class="search-filters">
             <h3>Search Properties</h3>
@@ -80,7 +99,7 @@
                 </div>
             </div>
             <div class="row mt-3">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="distressStatus" class="form-label">Distress Status</label>
                     <select class="form-select" id="distressStatus">
                         <option value="">All Status</option>
@@ -88,6 +107,17 @@
                         <option value="Short Sale">Short Sale</option>
                         <option value="Vacant">Vacant</option>
                         <option value="Estate Sale">Estate Sale</option>
+                        <option value="Foreclosure">Foreclosure</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="sourceFilter" class="form-label">Source</label>
+                    <select class="form-select" id="sourceFilter">
+                        <option value="">All Sources</option>
+                        <option value="Foreclosure.com">Foreclosure.com</option>
+                        <option value="OahuRE.com">OahuRE.com</option>
+                        <option value="PropStream">PropStream</option>
+                        <option value="MLS">MLS</option>
                     </select>
                 </div>
                 <div class="col-md-3 d-flex align-items-end">

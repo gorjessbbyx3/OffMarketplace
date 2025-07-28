@@ -15,10 +15,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Import routes
 const propertyRoutes = require('./routes/properties');
 const leadRoutes = require('./routes/leads');
+const scraperRoutes = require('./routes/scraper');
 
 // Use routes
 app.use('/api/properties', propertyRoutes);
 app.use('/api/leads', leadRoutes);
+app.use('/api/scraper', scraperRoutes);
 
 // Serve React app
 app.get('*', (req, res) => {
