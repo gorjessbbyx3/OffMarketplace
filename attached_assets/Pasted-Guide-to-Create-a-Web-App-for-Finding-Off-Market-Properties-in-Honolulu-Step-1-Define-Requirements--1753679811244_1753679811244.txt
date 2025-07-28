@@ -1,0 +1,65 @@
+Guide to Create a Web App for Finding Off-Market Properties in Honolulu
+Step 1: Define Requirements and Features
+The web app should enable you to find off-market properties (not listed on MLS like Redfin or Zillow) across all types (single-family, multi-family, condos, commercial, land) and filter by zoning (e.g., BMX-3, A-2, X-2, R-5), distress status, and other criteria. Key features include:
+•  Search Interface: Input location (zip codes: 96814, 96815, 96826, etc.), property type, price range (< $4M), distress type (pre-foreclosure, short sale, vacant, etc.), and zoning (BMX-3, A-2, etc.).
+•  Data Aggregation: Pull data from public records (e.g., Honolulu DPP, tax assessments), APIs (e.g., PropStream), and manual inputs (e.g., driving for dollars).
+•  Zoning Filter: Identify BMX-3 (STR-friendly without NUC, per Ordinance 22-7, 24-14) and other zones (A-2, X-2, R-5, etc.) using Honolulu zoning maps and tax records.
+•  ROI Calculator: Estimate STR ROI based on Airbnb rates (e.g., $100–$350/night in 96814), costs (taxes, maintenance, management), and upgrades.
+•  Lead Management: Save leads, tag (e.g., “BMX-3 multi-family”), and export as PDF/email for investors.
+•  Photo Integration: Fetch exterior images via Google Maps Street View or manual uploads.
+•  Distance Filter: Calculate distance from HNL (~21.3245°N, -157.9251°E) to ensure <5 miles.
+•  Compliance: Use legal data sources (public records, APIs) and avoid unauthorized scraping of proprietary platforms like Foreclosure.com or OahuRE.com.
+Example Use Case:
+•  Find a pre-foreclosure multi-family property in 96814, BMX-3 zoned, < $2M, within 5 miles of HNL, with >10% STR ROI potential. Save the lead and email it to an investor with photos and ROI estimates.
+Step 2: Choose Technology Stack
+Select tools for scalability, ease of development, and data integration:
+•  Frontend: React.js (dynamic UI), Tailwind CSS (styling), Chart.js (ROI charts).
+•  Backend: Node.js with Express (server), MongoDB (database for leads).
+•  APIs and Data Sources:
+	•  Public Records: Honolulu DPP (honolulu.gov), Real Property Assessment (realpropertyhonolulu.com), Hawaii State Judiciary (courts.state.hi.us).
+	•  Real Estate APIs: PropStream (~$99/month, distressed properties), RealtyTrac (~$49/month), REDX (~$99/month, skip tracing), DealMachine (~$49/month, driving for dollars).
+	•  Geolocation: Google Maps API (distance from HNL, Street View images).
+	•  Zoning: Honolulu GIS (honolulugis.org, geodata.hawaii.gov).
+•  Web Scraping: Puppeteer (Node.js) for legal public sources (e.g., county records), not Foreclosure.com/OahuRE.com.
+•  Hosting: Heroku (free tier for prototyping), AWS, or DigitalOcean (~$5/month).
+•  Authentication: Firebase for user login (bird dogs/investors).
+•  PDF/Email: pdfkit (PDF generation), nodemailer (email leads).
+Cost Estimate:
+•  APIs: $50–$200/month (PropStream, DealMachine, Google Maps).
+•  Hosting: $0–$10/month (Heroku free tier or DigitalOcean).
+•  Development: Free (self-coded) or $1,000–$5,000 (freelancer via Upwork).
+Step 3: Design Data Aggregation Strategy
+To simulate Foreclosure.com (distressed properties) and OahuRE.com (MLS-like listings), aggregate data from alternative sources to find off-market properties:
+1.  Public Records (Free):
+	•  Honolulu DPP (honolulu.gov): Zoning maps (BMX-3, A-2, X-2, R-5), property details. Search for multi-family or commercial properties in 96814, 96815, 96826.
+	•  Real Property Assessment (realpropertyhonolulu.com): Ownership, assessed value ($500K–$4M), tax delinquencies, liens. Filter for multi-family (4–15 units) or condos with distress signals (e.g., unpaid taxes).
+		•  Example Query: “96814 multi-family, assessed value < $4M, tax delinquent.”
+	•  Hawaii State Judiciary (courts.state.hi.us): Foreclosure filings (Lis Pendens, Notice of Default) for pre-foreclosures/short sales. Search “Honolulu foreclosure” for recent filings (e.g., July 2025).
+	•  Honolulu GIS (honolulugis.org): Zoning layer (BMX-3, updated September 2023), parcel data. Export as CSV/GeoJSON for 96814–96826.
+2.  Real Estate APIs (Paid):
+	•  PropStream: Pre-foreclosures, bank-owned (REO), auctions, vacant properties, and skip tracing (owner contact info). Filter for 96814–96826, multi-family, < $4M, distressed.
+		•  Example Filter: “Zip: 96814, Property Type: Multi-family, Status: Pre-foreclosure, Price < $4M.”
+	•  RealtyTrac: Foreclosures, pre-foreclosures, short sales. Similar to Foreclosure.com but API-accessible.
+	•  REDX: Pre-foreclosure leads with owner phone numbers/emails for direct outreach.
+	•  DealMachine: Driving for dollars app with API for vacant or distressed properties. Integrates with skip tracing.
+	•  Zillow API (Free, limited): Off-market signals (e.g., “Make Me Move” listings) for single-family/condos.
+3.  MLS Alternatives (OahuRE.com Simulation):
+	•  HawaiiHomeListings.com: Local platform with foreclosure/short sale listings (free, limited). Search “Honolulu off-market multi-family.”
+	•  Locations Hawaii (locationshawaii.com): Local brokerage with off-market deals. Contact for pocket listings.
+	•  Agent Networking: Partner with a licensed agent for OahuRE.com MLS access (expired listings, pre-MLS deals). Offer a referral fee (e.g., 1% of sale).
+	•  Zillow/Realtor.com: Filter for “foreclosure” or “potential short sale” in 96814–96826 (limited off-market data).
+4.  Driving for Dollars:
+	•  Scout Kaka’ako (Ward Ave, Auahi St), McCully-Moiliili (Kapiolani Blvd), Waikiki (Kuamoo St) for distressed signs (vacant units, peeling paint, overgrown lawns).
+	•  Use DealMachine to log addresses, check ownership (realpropertyhonolulu.com), and skip trace owners.
+	•  Example: Spot a vacant multi-family building at 800 Ward Ave, 96814. Verify BMX-3 zoning (honolulu.gov) and tax delinquency (realpropertyhonolulu.com).
+5.  Networking and Wholesalers:
+	•  Join Oahu Real Estate Investors (Meetup.com) or BiggerPockets forums. Post: “Seeking off-market Honolulu properties, all types, BMX-3 preferred, for cash buyers.”
+	•  Contact wholesalers (e.g., via Craigslist Honolulu “real estate” section) for pocket listings.
+	•  Check X for posts: “Honolulu off-market real estate” (e.g., @HawaiiRealEstate, July 2025).
+6.  Court Auctions:
+	•  Monitor courts.state.hi.us for foreclosure auctions (First Circuit Court, Honolulu). Search “July 2025 foreclosure auctions” for multi-family or condos.
+	•  Example: A 4-unit building in 96814, auctioned at $1.5M, BMX-3 zoned, identified via court filings.
+Step 4: Database Design
+Store properties and leads in MongoDB for efficient filtering and retrieval:
+•  Collections:
+	•  Properties:
