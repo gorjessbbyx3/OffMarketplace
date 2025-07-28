@@ -1,6 +1,6 @@
-entrypoint = "main.py"
-modules = ["nodejs-20", "python-3.10:v18-20230807-322e88b"]
-run = "streamlit run main.py"
+entrypoint = "server.js"
+modules = ["nodejs-20"]
+run = "node server.js"
 
 hidden = [".pythonlibs"]
 
@@ -9,7 +9,7 @@ channel = "stable-23_05"
 
 [deployment]
 deploymentTarget = "gce"
-run = "streamlit run main.py"
+run = "node server.js"
 
 [workflows]
 runButton = "Start Server"
