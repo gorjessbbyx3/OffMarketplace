@@ -8,6 +8,7 @@ class PropertyDashboard {
 
         this.initializeEventListeners();
         this.loadDashboardData();
+        this.addWelcomeMessage();
     }
 
     initializeEventListeners() {
@@ -277,8 +278,8 @@ class PropertyDashboard {
         this.showTyping();
 
         try {
-            // Send message to AI endpoint
-            const response = await fetch('/api/test/hello', {
+            // Send message to AI chat endpoint
+            const response = await fetch('/api/ai-chat/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -290,10 +291,15 @@ class PropertyDashboard {
 
             // Hide typing indicator and add AI response
             this.hideTyping();
-            this.addMessage(data.response || data.message, 'ai');
+            
+            if (data.success) {
+                this.addMessage(data.response, 'ai');
+            } else {
+                this.addMessage(data.fallback_response || 'I apologize, but I\'m having trouble processing your request right now. Please try again.', 'ai');
+            }
 
             // If the message is about finding properties, also update leads
-            if (message.toLowerCase().includes('find') || message.toLowerCase().includes('search')) {
+            if (message.toLowerCase().includes('find') || message.toLowerCase().includes('search') || message.toLowerCase().includes('property')) {
                 setTimeout(() => this.loadRecentLeads(), 1000);
             }
 
@@ -307,11 +313,25 @@ class PropertyDashboard {
     addMessage(text, type) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}`;
+        
+        const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
         if (type === 'ai') {
-            messageDiv.innerHTML = `<strong>AI Assistant:</strong> ${text}`;
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <strong><i class="fas fa-robot"></i> AI Assistant</strong>
+                    <span class="timestamp">${timestamp}</span>
+                </div>
+                <div class="message-content">${text}</div>
+            `;
         } else {
-            messageDiv.innerHTML = `<strong>You:</strong> ${text}`;
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <strong><i class="fas fa-user"></i> You</strong>
+                    <span class="timestamp">${timestamp}</span>
+                </div>
+                <div class="message-content">${text}</div>
+            `;
         }
 
         this.chatMessages.appendChild(messageDiv);
@@ -324,6 +344,20 @@ class PropertyDashboard {
 
     hideTyping() {
         this.typingIndicator.style.display = 'none';
+    }
+
+    addWelcomeMessage() {
+        const welcomeMessage = `Hello! I'm your AI real estate assistant for Hawaii properties. I can help you with:
+
+🏠 Finding investment properties
+📊 Market analysis and trends
+💰 ROI calculations
+🔍 Off-market opportunities
+📋 Property comparisons
+
+Try asking: "Find me a duplex in Kakaako under $1M" or "What's the current market like for condos?"`;
+
+        this.addMessage(welcomeMessage, 'ai');
     }
 
     async contactLead(leadId) {
@@ -385,8 +419,12 @@ async function generateAILeads() {
         const response = await fetch('/api/scraper/generate-leads');
         const data = await response.json();
 
-        dashboard.displayLeads(data.leads.slice(0, 10));
-        dashboard.addMessage(`Generated ${data.total_leads} new leads! Found ${data.high_priority} high-priority opportunities.`, 'ai');
+        if (data.leads && data.leads.length > 0) {
+            dashboard.displayLeads(data.leads.slice(0, 10));
+            dashboard.addMessage(`Generated ${data.leads.length} new leads! Found ${data.high_priority || 0} high-priority opportunities.`, 'ai');
+        } else {
+            dashboard.addMessage('No leads found in database. Let me search for current opportunities...', 'ai');
+        }
         dashboard.updateStats();
 
     } catch (error) {

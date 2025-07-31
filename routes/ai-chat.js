@@ -16,6 +16,10 @@ router.post('/chat', async (req, res) => {
       });
     }
 
+    // Check for specific property queries and provide targeted responses
+    const propertyKeywords = ['property', 'house', 'condo', 'apartment', 'foreclosure', 'investment', 'buy', 'sell', 'rent'];
+    const isPropertyQuery = propertyKeywords.some(keyword => message.toLowerCase().includes(keyword));
+
     // Enhanced system prompt with comprehensive Hawaii real estate knowledge
     const systemPrompt = `You are an expert Hawaii real estate investment assistant with comprehensive knowledge of:
 
@@ -50,7 +54,18 @@ FINANCING OPTIONS:
 - Portfolio lenders for multiple properties
 - Seller financing possible in distressed situations
 
-Provide specific, actionable advice based on this knowledge. If asked about specific properties or searches, provide realistic examples and current market insights.`;
+Provide specific, actionable advice based on this knowledge. If asked about specific properties or searches, provide realistic examples and current market insights.
+
+RESPONSE GUIDELINES:
+- Keep responses conversational but professional
+- Provide specific Hawaii locations and price ranges when relevant
+- Suggest actionable next steps
+- Ask clarifying questions when needed
+- Reference current market conditions (2024)
+
+USER QUERY TYPE: ${isPropertyQuery ? 'PROPERTY-FOCUSED' : 'GENERAL'}
+
+Respond as a knowledgeable Hawaii real estate expert who understands both investment strategy and local market conditions.`;
 
     const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
       model: 'llama3-8b-8192',
