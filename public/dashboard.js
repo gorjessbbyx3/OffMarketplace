@@ -968,41 +968,17 @@ async function findOffMarketProperties() {
     }
 }
 
-// Check authentication before initializing dashboard
+// Remove authentication check
 function checkAuth() {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-        window.location.href = '/login.html';
-        return false;
-    }
-    
-    // Verify token
-    fetch('/api/auth/verify', {
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (!data.success) {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('user');
-            window.location.href = '/login.html';
-        }
-    })
-    .catch(error => {
-        console.error('Auth verification failed:', error);
-        window.location.href = '/login.html';
-    });
-    
     return true;
 }
 
 // Initialize dashboard when page loads
 let dashboard;
 document.addEventListener('DOMContentLoaded', function() {
-    if (!checkAuth()) return;
-    dashboard = new PropertyDashboard();
+    if (checkAuth()) {
+        dashboard = new PropertyDashboard();
+    }
 });
 
 async function generateDetailedReports() {
