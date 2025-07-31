@@ -531,18 +531,6 @@ class HawaiiPropertyScraper {
 }
 
 module.exports = HawaiiPropertyScraper;
-const puppeteer = require('puppeteer');
-const axios = require('axios');
-const cheerio = require('cheerio');
-
-class HawaiiPropertyScraper {
-  constructor() {
-    this.sources = [
-      'foreclosure.com',
-      'OahuRE.com',
-      'Hawaii BOC Data'
-    ];
-  }
 
   async scrapeAllSources() {
     console.log('Starting Hawaii property scraping...');
