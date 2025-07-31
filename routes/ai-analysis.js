@@ -155,59 +155,97 @@ router.get('/off-market-opportunities', async (req, res) => {
   }
 });
 
-// Specialized search for Kakaako apartments in pre-foreclosure
-router.post('/find-kakaako-apartment', async (req, res) => {
+// Specialized search for short term rental properties
+router.post('/find-str-properties', async (req, res) => {
   try {
-    if (!process.env.GROQ_API_KEY) {
-      return res.status(500).json({ 
-        error: 'GROQ_API_KEY not configured',
-        message: 'Please set your GROQ_API_KEY in environment variables'
-      });
-    }
-    
-    const groqClient = new GroqClient();roqClient();
+    const groqClient = new GroqClient();
+    const { criteria } = req.body;
 
-    // First check database for existing matches
-    const dbResult = await client.execute({
-      sql: `SELECT * FROM properties 
-            WHERE (address LIKE '%Kakaako%' OR address LIKE '%Kaka%ako%' OR zip = '96813')
-            AND units >= 4 
-            AND price BETWEEN 1500000 AND 2500000
-            AND (distress_status LIKE '%foreclosure%' OR distress_status LIKE '%Foreclosure%')
-            ORDER BY price ASC`,
-      args: []
-    });
+    // Search for short-term rental suitable properties in database
+    const dbQuery = `
+      SELECT * FROM properties 
+      WHERE (
+        property_type IN ('Condo', 'Single-family', 'Townhouse') 
+        OR address LIKE '%Waikiki%' 
+        OR address LIKE '%beach%'
+        OR zip IN ('96815', '96816', '96821', '96825')
+      )
+      AND price BETWEEN 400000 AND 1500000
+      ORDER BY 
+        CASE 
+          WHEN address LIKE '%Waikiki%' THEN 1
+          WHEN address LIKE '%beach%' THEN 2
+          WHEN zip IN ('96815', '96816') THEN 3
+          ELSE 4
+        END,
+        price ASC
+      LIMIT 15
+    `;
 
-    // Use GROQ AI to search for specific Kakaako 4-unit apartment in pre-foreclosure
+    const dbMatches = await client.execute({ sql: dbQuery, args: [] });
+
+    // Get AI analysis for STR market opportunities
     const aiSearchResult = await groqClient.findSpecificProperty({
-      location: 'Kakaako, Honolulu, Hawaii',
-      property_type: '4-unit apartment',
-      price_range: '$1.8M - $2.2M',
-      status: 'pre-foreclosure',
-      specific_request: 'Find the exact address of a 4-unit apartment building in Kakaako that is in pre-foreclosure status for approximately $2 million'
+      location: 'Hawaii tourist areas',
+      property_type: 'Short-term rental properties',
+      price_range: '$400K - $1.5M',
+      status: 'vacation rental permitted or eligible',
+      specific_request: 'Looking for properties suitable for Airbnb/VRBO with high tourism traffic'
     });
+
+    // Enhance properties with STR analysis
+    const enhancedProperties = (dbMatches.rows || []).map(property => ({
+      ...property,
+      str_potential: calculateSTRPotential(property),
+      tourism_score: calculateTourismScore(property)
+    }));
 
     res.json({
       success: true,
-      database_matches: dbResult.rows,
-      ai_search_result: aiSearchResult,
-      search_criteria: {
-        location: 'Kakaako',
-        units: 4,
-        price_target: '$2,000,000',
-        status: 'pre-foreclosure'
-      },
+      database_matches: enhancedProperties,
+      properties: enhancedProperties,
+      ai_analysis: aiSearchResult,
+      search_focus: 'Short-term rental opportunities',
+      str_insights: 'Properties near beaches and tourist attractions typically generate 15-25% higher yields',
       timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('Kakaako search error:', error);
+    console.error('STR property search error:', error);
     res.status(500).json({ 
-      error: 'Failed to search for Kakaako apartment',
-      details: error.message 
+      success: false, 
+      error: 'Failed to search STR properties',
+      message: error.message 
     });
   }
 });
+
+// Helper function to calculate STR potential
+function calculateSTRPotential(property) {
+  let score = 50; // Base score
+
+  // Location bonuses
+  if (property.address && property.address.toLowerCase().includes('waikiki')) score += 25;
+  if (property.address && property.address.toLowerCase().includes('beach')) score += 20;
+  if (property.zip && ['96815', '96816', '96821'].includes(property.zip)) score += 15;
+
+  // Property type bonuses
+  if (property.property_type === 'Condo') score += 15;
+  if (property.property_type === 'Single-family') score += 10;
+
+  // Price range optimization
+  if (property.price >= 400000 && property.price <= 800000) score += 10;
+
+  return Math.min(score, 100);
+}
+
+// Helper function to calculate tourism score
+function calculateTourismScore(property) {
+  const touristAreas = ['waikiki', 'diamond head', 'ala moana', 'downtown', 'chinatown'];
+  const address = (property.address || '').toLowerCase();
+
+  return touristAreas.some(area => address.includes(area)) ? 'High' : 'Medium';
+}
 
 // Generate detailed reports for all properties found by GROQ AI
 router.post('/generate-detailed-reports', async (req, res) => {
