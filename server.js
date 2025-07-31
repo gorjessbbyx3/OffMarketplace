@@ -27,6 +27,7 @@ const aiAnalysisRoutes = require('./routes/ai-analysis');
 const imageScraper = require('./routes/image-scraper');
 const aiChatRoutes = require('./routes/ai-chat');
 const webSearchRoutes = require('./routes/web-search');
+const offMarketLeadsRoutes = require('./routes/off-market-leads');
 
 // Routes
 app.use('/api/properties', propertyRoutes);
@@ -37,6 +38,7 @@ app.use('/api/ai', aiChatRoutes);
 app.use('/api/scraper', require('./routes/image-scraper'));
 app.use('/api/test', require('./routes/test-groq'));
 app.use('/api/search', webSearchRoutes);
+app.use('/api/off-market', offMarketLeadsRoutes);
 
 // Serve React app
 app.get('*', (req, res) => {

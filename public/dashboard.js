@@ -208,14 +208,90 @@ class PropertyDashboard {
         }
     }
 
-    displayLeads(leads) {
-        if (leads.length === 0) {
-            this.leadsContainer.innerHTML = `
-                <div class="text-center text-muted">
-                    <i class="fas fa-search fa-3x mb-3"></i>
-                    <p>No AI leads generated yet. Try generating new leads!</p>
+    displayOffMarketLeads(leads) {
+        const container = document.getElementById('leadsContainer');
+        if (!container) return;
+
+        if (!leads || leads.length === 0) {
+            container.innerHTML = '<div class="text-muted">No off-market opportunities found.</div>';
+            return;
+        }
+
+        container.innerHTML = leads.map(lead => `
+            <div class="card mb-3 ${lead.urgency_level === 'critical' ? 'border-danger' : lead.urgency_level === 'high' ? 'border-warning' : ''}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-${lead.urgency_level === 'critical' ? 'danger' : lead.urgency_level === 'high' ? 'warning' : 'success'} me-2">
+                            ${lead.off_market_score}/100
+                        </span>
+                        <strong>${lead.address}</strong>
+                        <span class="badge bg-info ms-2">${lead.urgency_level.toUpperCase()}</span>
+                    </div>
+                    <span class="text-success fw-bold">$${lead.price?.toLocaleString()}</span>
                 </div>
-            `;
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Type:</strong> ${lead.property_type}</p>
+                            <p><strong>Status:</strong> ${lead.distress_status}</p>
+                            <p><strong>Source:</strong> ${lead.source}</p>
+                            <p><strong>Est. Discount:</strong> ${lead.estimated_discount}</p>
+                            <p><strong>Lead Quality:</strong> <span class="badge bg-${lead.lead_quality === 'A' ? 'success' : lead.lead_quality === 'B' ? 'warning' : 'secondary'}">${lead.lead_quality}</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <strong>Off-Market Indicators:</strong>
+                                <ul class="list-unstyled mt-1">
+                                    ${(lead.off_market_indicators || []).map(indicator => 
+                                        `<li><small class="text-primary">• ${indicator}</small></li>`
+                                    ).join('')}
+                                </ul>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Motivation Signals:</strong>
+                                <ul class="list-unstyled mt-1">
+                                    ${(lead.motivation_signals || []).map(signal => 
+                                        `<li><small class="text-warning">• ${signal}</small></li>`
+                                    ).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <strong>AI Analysis:</strong>
+                        <p class="text-muted small">${lead.ai_reasoning}</p>
+                    </div>
+                    <div class="mt-2">
+                        <strong>Contact Strategy:</strong>
+                        <p class="small">${lead.contact_strategy}</p>
+                    </div>
+                    <div class="mt-2">
+                        <strong>Action Plan:</strong>
+                        <ul class="list-unstyled">
+                            ${(lead.action_plan || []).map(action => 
+                                `<li class="small">✓ ${action}</li>`
+                            ).join('')}
+                        </ul>
+                    </div>
+                    <div class="mt-3">
+                        <button class="btn btn-primary btn-sm me-2" onclick="dashboard.addToLeads('${lead.id}', 'Hot Off-Market Lead')">
+                            Add to Leads
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="dashboard.showPropertyDetails('${lead.id}')">
+                            View Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    displayLeads(leads) {
+        const container = document.getElementById('leadsContainer');
+        if (!container) return;
+
+        if (!leads || leads.length === 0) {
+            container.innerHTML = '<div class="text-muted">No leads found. Try generating new leads first.</div>';
             return;
         }
 
@@ -291,7 +367,7 @@ class PropertyDashboard {
 
             // Hide typing indicator and add AI response
             this.hideTyping();
-            
+
             if (data.success) {
                 this.addMessage(data.response, 'ai');
             } else {
@@ -313,7 +389,7 @@ class PropertyDashboard {
     addMessage(text, type) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}`;
-        
+
         const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
         if (type === 'ai') {
@@ -491,7 +567,7 @@ async function findShortTermRentalProperties() {
                 : 'AI identified prime short-term rental opportunities near beaches, tourist attractions, and downtown areas. Properties with existing permits show highest potential.';
 
             dashboard.addMessage(message, 'ai');
-            
+
             // If we have actual properties, display them
             if (data.properties && data.properties.length > 0) {
                 dashboard.displayProperties(data.properties);
@@ -501,7 +577,7 @@ async function findShortTermRentalProperties() {
     } catch (error) {
         console.error('Short-term rental search error:', error);
         dashboard.addMessage('Unable to complete short-term rental search. Analyzing market trends for vacation rental opportunities...', 'ai');
-        
+
         // Fallback message with general STR insights
         setTimeout(() => {
             dashboard.addMessage('Based on Hawaii tourism data: Properties within 1 mile of beaches, Waikiki, or major attractions typically generate 15-25% higher rental yields. Consider condos with existing vacation rental permits.', 'ai');
