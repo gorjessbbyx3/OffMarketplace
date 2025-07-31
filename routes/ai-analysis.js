@@ -427,29 +427,3 @@ router.post('/search-properties', async (req, res) => {
 });
 
 module.exports = router;
-const express = require('express');
-const router = express.Router();
-const { analyzeProperty } = require('../utils/groqClient');
-
-// Analyze property for investment potential
-router.post('/analyze', async (req, res) => {
-  try {
-    const { property } = req.body;
-    
-    if (!property) {
-      return res.status(400).json({ error: 'Property data required' });
-    }
-
-    const analysis = await analyzeProperty(property);
-    
-    res.json({
-      success: true,
-      analysis
-    });
-  } catch (error) {
-    console.error('AI analysis error:', error);
-    res.status(500).json({ error: 'Analysis failed' });
-  }
-});
-
-module.exports = router;
