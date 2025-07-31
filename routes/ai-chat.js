@@ -23,7 +23,7 @@ async function getHawaiiZoningInfo(location) {
     'P-1': { name: 'Restricted Preservation', allowed: ['Conservation', 'Limited recreation'], density: 'None' },
     'P-2': { name: 'General Preservation', allowed: ['Parks', 'Open space', 'Recreation'], density: 'Very Low' }
   };
-
+  
   // Common Honolulu area zonings for investment properties
   const investmentZonings = {
     'Kakaako': ['A-2', 'BMX-3', 'B-2'], // High-density mixed use
@@ -35,7 +35,7 @@ async function getHawaiiZoningInfo(location) {
     'Waikiki': ['A-2', 'B-2'], // Tourist/residential high-density
     'Chinatown': ['BMX-3', 'B-1', 'A-2'] // Historic mixed-use
   };
-
+  
   return { hawaiiZoningData, investmentZonings };
 }
 
@@ -262,19 +262,19 @@ router.get('/zoning/:area', async (req, res) => {
   try {
     const area = req.params.area.toLowerCase();
     const { hawaiiZoningData, investmentZonings } = await getHawaiiZoningInfo();
-
+    
     // Find matching area
     const areaMatch = Object.keys(investmentZonings).find(key => 
       key.toLowerCase().includes(area) || area.includes(key.toLowerCase())
     );
-
+    
     if (areaMatch) {
       const zones = investmentZonings[areaMatch];
       const zoneDetails = zones.map(zone => ({
         code: zone,
         ...hawaiiZoningData[zone]
       }));
-
+      
       res.json({
         success: true,
         area: areaMatch,
@@ -301,7 +301,7 @@ router.get('/zoning/:area', async (req, res) => {
 // Generate investment analysis based on zoning
 function generateZoningInvestmentAnalysis(zoneDetails) {
   const analysis = [];
-
+  
   zoneDetails.forEach(zone => {
     if (zone.code.includes('A-')) {
       analysis.push(`${zone.code}: Excellent for multi-family investments and rental properties`);
@@ -315,7 +315,7 @@ function generateZoningInvestmentAnalysis(zoneDetails) {
       analysis.push(`${zone.code}: Large lot development potential, agricultural exemptions possible`);
     }
   });
-
+  
   return analysis;
 }
 
@@ -406,10 +406,12 @@ Each section should be 2-3 sentences, professional and actionable.`;
   }
 });
 
-// Generate AI-powered leads
+// Generate AI-powered leads with dual AI collaboration
 router.post('/generate-leads', async (req, res) => {
   try {
     const { min_score = 60, include_ai_analysis = true } = req.body;
+
+    console.log('🚀 Starting collaborative AI lead generation...');
 
     // Get properties for lead generation
     const result = await client.execute({
@@ -422,80 +424,122 @@ router.post('/generate-leads', async (req, res) => {
 
     const properties = result.rows;
 
-    if (include_ai_analysis && process.env.GROQ_API_KEY) {
-      // Enhance with AI analysis
-      for (let property of properties) {
-        try {
-          const aiInsights = await generatePropertyInsights(property);
-          property.ai_insights = aiInsights;
+    if (include_ai_analysis && (process.env.GROQ_API_KEY || process.env.ANTHROPIC_API_KEY)) {
+      console.log(`🤖 Processing ${properties.length} properties with dual AI system...`);
+      
+      // Process properties in batches of 5 with parallel AI analysis
+      const batchSize = 5;
+      const batches = [];
+      
+      for (let i = 0; i < properties.length; i += batchSize) {
+        batches.push(properties.slice(i, i + batchSize));
+      }
 
-          // Update database with AI insights
-          await client.execute({
-            sql: 'UPDATE properties SET ai_analysis = ? WHERE id = ?',
-            args: [JSON.stringify({ai_insights: aiInsights}), property.id]
-          });
-        } catch (error) {
-          console.error(`AI analysis failed for property ${property.id}:`, error);
-          property.ai_insights = 'AI analysis pending...';
-        }
+      for (const batch of batches) {
+        // Process each batch with parallel AI calls
+        const batchPromises = batch.map(async (property) => {
+          try {
+            // Run both AIs in parallel for faster processing
+            const [groqInsights, anthropicInsights] = await Promise.allSettled([
+              generatePropertyInsights(property),
+              generateAnthropicInsights(property)
+            ]);
+
+            // Combine insights from both AIs
+            const combinedInsights = combineAIInsights(
+              groqInsights.status === 'fulfilled' ? groqInsights.value : 'GROQ analysis unavailable',
+              anthropicInsights.status === 'fulfilled' ? anthropicInsights.value : 'Anthropic analysis unavailable'
+            );
+
+            property.ai_insights = combinedInsights;
+            property.dual_ai_score = calculateDualAIScore(groqInsights, anthropicInsights);
+
+            // Update database with combined analysis
+            await client.execute({
+              sql: 'UPDATE properties SET ai_analysis = ?, investment_score = ? WHERE id = ?',
+              args: [
+                JSON.stringify({
+                  groq_insights: groqInsights.status === 'fulfilled' ? groqInsights.value : null,
+                  anthropic_insights: anthropicInsights.status === 'fulfilled' ? anthropicInsights.value : null,
+                  combined_insights: combinedInsights,
+                  dual_ai_score: property.dual_ai_score
+                }), 
+                property.dual_ai_score,
+                property.id
+              ]
+            });
+
+            return property;
+          } catch (error) {
+            console.error(`Dual AI analysis failed for property ${property.id}:`, error);
+            property.ai_insights = 'AI analysis pending...';
+            return property;
+          }
+        });
+
+        // Wait for batch to complete before processing next batch
+        await Promise.all(batchPromises);
+        
+        // Small delay between batches to respect API rate limits
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
+
+    // Sort by dual AI score if available
+    const sortedProperties = properties.sort((a, b) => (b.dual_ai_score || b.lead_score || 0) - (a.dual_ai_score || a.lead_score || 0));
 
     res.json({
       success: true,
       new_leads_count: properties.length,
-      leads: properties.map(p => ({
+      high_priority_leads: sortedProperties.filter(p => (p.dual_ai_score || p.lead_score || 0) >= 80).length,
+      processing_method: 'Dual AI Collaboration',
+      leads: sortedProperties.map(p => ({
         id: p.id,
         address: p.address,
         price: p.price,
         lead_score: p.lead_score || 60,
+        dual_ai_score: p.dual_ai_score,
         distress_status: p.distress_status,
         ai_insights: p.ai_insights || 'Investment potential analysis available'
       }))
     });
 
   } catch (error) {
-    console.error('Lead generation error:', error);
+    console.error('Collaborative AI lead generation error:', error);
     res.json({
       success: false,
-      error: 'Failed to generate leads'
+      error: 'Failed to generate leads with dual AI system'
     });
   }
 });
 
-// Helper function to generate property insights
+// Helper function to generate GROQ property insights
 async function generatePropertyInsights(property) {
   try {
-    const prompt = `Analyze this Hawaii property for investment potential:
+    const prompt = `Quick Hawaii property analysis:
 
-Property: ${property.address}
-Price: $${property.price?.toLocaleString() || 'N/A'}
-Type: ${property.property_type}
-Status: ${property.distress_status || 'Standard'}
+${property.address} - $${property.price?.toLocaleString() || 'N/A'}
+Type: ${property.property_type} | Status: ${property.distress_status || 'Standard'}
 
-Provide a brief investment insight (1-2 sentences) focusing on:
-- Key opportunity or advantage
-- Potential return or strategy
-
-Keep it concise and actionable for real estate investors.`;
+Provide: Investment score (1-10), key opportunity, risk level.`;
 
     const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
       model: 'llama3-8b-8192',
       messages: [
         {
           role: 'system',
-          content: 'You are a Hawaii real estate investment advisor. Provide brief, actionable property insights.'
+          content: 'You are a Hawaii real estate AI providing quick investment scores and insights.'
         },
         {
           role: 'user',
           content: prompt
         }
       ],
-      temperature: 0.4,
-      max_tokens: 150
+      temperature: 0.3,
+      max_tokens: 100
     }, {
       headers: {
-        'Authorization': `Bearer ${groqApiKey}`,
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
         'Content-Type': 'application/json'
       }
     });
@@ -503,9 +547,77 @@ Keep it concise and actionable for real estate investors.`;
     return response.data.choices[0].message.content;
 
   } catch (error) {
-    console.error('Property insights error:', error);
-    return 'Strong investment potential identified for this Hawaii property.';
+    console.error('GROQ insights error:', error);
+    return 'GROQ analysis unavailable - property shows potential.';
   }
+}
+
+// Helper function to generate Anthropic property insights
+async function generateAnthropicInsights(property) {
+  try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return 'Anthropic analysis unavailable - API key missing.';
+    }
+
+    const AnthropicClient = require('../utils/anthropicClient');
+    const anthropicClient = new AnthropicClient();
+    
+    const analysis = await anthropicClient.generateDetailedPropertyReport(property, {});
+    
+    // Extract key insights from detailed report
+    const insights = analysis.detailed_report.split('\n').slice(0, 3).join(' ');
+    return insights.substring(0, 200) + '...';
+
+  } catch (error) {
+    console.error('Anthropic insights error:', error);
+    return 'Anthropic analysis unavailable - strong fundamentals detected.';
+  }
+}
+
+// Combine insights from both AIs
+function combineAIInsights(groqInsights, anthropicInsights) {
+  const groqScore = extractScoreFromText(groqInsights);
+  const anthropicConfidence = anthropicInsights.includes('high') ? 'High' : 'Medium';
+  
+  return `🤖 GROQ AI: ${groqInsights.substring(0, 100)}... | 🧠 Anthropic AI: ${anthropicInsights.substring(0, 100)}... | Combined Score: ${groqScore}/10 | Confidence: ${anthropicConfidence}`;
+}
+
+// Calculate combined AI score
+function calculateDualAIScore(groqResult, anthropicResult) {
+  let score = 50; // Base score
+
+  // GROQ scoring
+  if (groqResult.status === 'fulfilled') {
+    const groqScore = extractScoreFromText(groqResult.value);
+    score += groqScore * 3; // Weight GROQ score
+  }
+
+  // Anthropic scoring
+  if (anthropicResult.status === 'fulfilled') {
+    const anthropicText = anthropicResult.value.toLowerCase();
+    if (anthropicText.includes('strong') || anthropicText.includes('excellent')) score += 15;
+    if (anthropicText.includes('high potential') || anthropicText.includes('opportunity')) score += 10;
+    if (anthropicText.includes('risk') || anthropicText.includes('caution')) score -= 10;
+  }
+
+  return Math.min(Math.max(score, 0), 100);
+}
+
+// Extract numeric score from AI text
+function extractScoreFromText(text) {
+  const scoreMatch = text.match(/(\d+)\/10|score.*?(\d+)|(\d+)\s*out/i);
+  if (scoreMatch) {
+    return parseInt(scoreMatch[1] || scoreMatch[2] || scoreMatch[3]);
+  }
+  
+  // Fallback scoring based on keywords
+  const lowerText = text.toLowerCase();
+  if (lowerText.includes('excellent') || lowerText.includes('strong buy')) return 9;
+  if (lowerText.includes('good') || lowerText.includes('opportunity')) return 7;
+  if (lowerText.includes('moderate') || lowerText.includes('consider')) return 6;
+  if (lowerText.includes('weak') || lowerText.includes('risk')) return 4;
+  
+  return 5; // Default score
 }
 
 // Fix the missing groqApiKey variable

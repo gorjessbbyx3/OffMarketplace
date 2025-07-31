@@ -504,30 +504,48 @@ Try asking: "Find me a duplex in Kakaako under $1M" or "What's the current marke
 
 // Global functions for button clicks
 async function generateAILeads() {
-    document.getElementById('leadsContainer').innerHTML = `
+    const container = document.getElementById('leadsContainer');
+    
+    container.innerHTML = `
         <div class="text-center">
             <div class="spinner-border text-primary" role="status"></div>
-            <p class="mt-2">AI is generating new leads...</p>
+            <p class="mt-2">🤖 GROQ AI + 🧠 Anthropic AI working together...</p>
+            <small class="text-muted">Processing properties with dual AI analysis</small>
         </div>
     `;
 
     try {
-        const response = await fetch('/api/scraper/generate-leads');
+        const response = await fetch('/api/ai-chat/generate-leads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                min_score: 60, 
+                include_ai_analysis: true 
+            })
+        });
+        
         const data = await response.json();
 
-        if (data.leads && data.leads.length > 0) {
+        if (data.success && data.leads && data.leads.length > 0) {
             dashboard.displayLeads(data.leads.slice(0, 10));
-            dashboard.addMessage(`Generated ${data.leads.length} new leads! Found ${data.high_priority || 0} high-priority opportunities.`, 'ai');
+            dashboard.addMessage(`🚀 Dual AI Generated ${data.leads.length} leads! Found ${data.high_priority_leads || 0} high-priority opportunities using ${data.processing_method}.`, 'ai');
         } else {
-            dashboard.addMessage('No leads found in database. Let me search for current opportunities...', 'ai');
+            // Fallback to scraper endpoint
+            const fallbackResponse = await fetch('/api/scraper/generate-leads');
+            const fallbackData = await fallbackResponse.json();
+            
+            if (fallbackData.leads && fallbackData.leads.length > 0) {
+                dashboard.displayLeads(fallbackData.leads.slice(0, 10));
+                dashboard.addMessage(`Generated ${fallbackData.leads.length} leads from database! Found ${fallbackData.high_priority || 0} high-priority opportunities.`, 'ai');
+            } else {
+                dashboard.addMessage('No leads found. Try running property scraping first to populate the database.', 'ai');
+            }
         }
         dashboard.updateStats();
 
     } catch (error) {
         console.error('Error generating leads:', error);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-        dashboard.addMessage('Database search had issues, let me search the web for current opportunities...', 'ai');
+        dashboard.addMessage('AI lead generation encountered an issue. Please check the console for details.', 'ai'); me search the web for current opportunities...', 'ai');
 
         // Fallback to web search
         try {
