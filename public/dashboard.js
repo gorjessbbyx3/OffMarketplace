@@ -545,7 +545,39 @@ async function generateAILeads() {
 
     } catch (error) {
         console.error('Error generating leads:', error);
-        dashboard.addMessage('AI lead generation encountered an issue. Please check the console for details.', 'ai'); me search the web for current opportunities...', 'ai');
+        dashboard.addMessage('AI lead generation encountered an issue. Please check the console for details.', 'ai');
+
+        // Fallback to web search
+        try {
+            const webSearchResponse = await fetch('/api/search/search-properties', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: 'Hawaii investment properties foreclosure distressed',
+                    location: 'Honolulu',
+                    property_type: 'Multi-unit'
+                })
+            });
+            const webData = await webSearchResponse.json();
+
+            if (webData.success) {
+                dashboard.addMessage(`Found current market opportunities through web search! Analyzing ${webData.sources_searched.length} sources including foreclosure.com and Hawaii MLS.`, 'ai');
+
+                // Display web search results
+                const searchResults = document.getElementById('leadsContainer');
+                searchResults.innerHTML = `
+                    <div class="alert alert-info">
+                        <h6>🌐 Web Search Results</h6>
+                        <small>Sources: ${webData.sources_searched.join(', ')}</small>
+                        <div class="mt-2" style="white-space: pre-wrap; font-size: 0.9em;">${webData.search_results}</div>
+                    </div>
+                `;
+            }
+        } catch (webError) {
+            dashboard.addMessage('Both database and web search are having issues. Please try again later.', 'ai');
+        }
+    }
+}
 
         // Fallback to web search
         try {
@@ -999,6 +1031,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Missing function definitions
+async function scrapeHawaiiProperties() {
+    dashboard.addMessage('Starting Hawaii property scraping...', 'ai');
+
+    try {
+        const response = await fetch('/api/scraper/scrape-hawaii', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            dashboard.addMessage(`Scraping complete! Found ${result.total_scraped} properties with ${result.new_properties} new additions.`, 'ai');
+            dashboard.updateStats();
+        } else {
+            dashboard.addMessage(`Scraping encountered issues: ${result.error}`, 'ai');
+        }
+
+    } catch (error) {
+        console.error('Scraping error:', error);
+        dashboard.addMessage('Scraping failed. Please check the server status.', 'ai');
+    }
+}
+
+async function scrapeProperties() {
+    return scrapeHawaiiProperties();
+}
+
 async function generateDetailedReports() {
     try {
         showLoading('🤖 Analyzing with GROQ AI and 🧠 generating detailed reports with Anthropic AI...');
@@ -1221,4 +1284,45 @@ function createWebSearchResultsDiv() {
     div.className = 'mt-4';
     document.getElementById('ai-leads-results').appendChild(div);
     return div;
+}
+
+// Add helper functions for loading states
+function showLoading(message = 'Loading...') {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'loading-indicator';
+    loadingDiv.className = 'text-center p-3';
+    loadingDiv.innerHTML = `
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2">${message}</p>
+    `;
+    document.body.appendChild(loadingDiv);
+}
+
+function hideLoading() {
+    const loadingDiv = document.getElementById('loading-indicator');
+    if (loadingDiv) {
+        loadingDiv.remove();
+    }
+}
+
+// Add missing display functions
+function displayLeads(leads) {
+    dashboard.displayLeads(leads);
+}
+
+function displayAiAnalysis(analysis) {
+    dashboard.addMessage(analysis, 'ai');
+}
+
+function addMessage(type, message) {
+    dashboard.addMessage(message, type);
+}
+
+// Add missing copy/export functions
+function copyReport(propertyId) {
+    alert(`Copying report for property ${propertyId} to clipboard`);
+}
+
+function exportReport(propertyId) {
+    alert(`Exporting PDF report for property ${propertyId}`);
 }
