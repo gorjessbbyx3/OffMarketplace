@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const { client } = require('../database/connection');
@@ -34,7 +33,7 @@ router.post('/find-off-market-leads', async (req, res) => {
     const analysisPromises = result.rows.map(async (property) => {
       try {
         const analysis = await analyzeOffMarketPotential(property);
-        
+
         if (analysis.off_market_score >= 70) {
           return {
             id: property.id,
@@ -87,8 +86,7 @@ router.post('/find-off-market-leads', async (req, res) => {
       search_criteria: {
         min_score: 70,
         analysis_period: '30 days',
-        sources_analyzed: [...new Set(result.rows.map(p => p.source))],
-        data_quality: 'MLS and public records verified'
+        sources_analyzed: [...new Set(result.rows.map(p => p.source))]
       }
     });
 
@@ -205,7 +203,7 @@ Provide detailed JSON response focusing on distressed acquisition opportunities:
 }`;
 
     const response = await groqClient.analyzeWithGroq(prompt);
-    
+
     // Parse AI response
     let analysis;
     try {
@@ -233,8 +231,16 @@ function enhanceWithRuleBasedScoring(property, analysis) {
   const taxDelinquencySignals = [];
   const preForeclosureSignals = [];
 
-  // HIGH PRIORITY: Active foreclosure proceedings
-  if (property.distress_status === 'Foreclosure') {
+  // HIGH PRIORITY: Court foreclosure and tax delinquency
+  if (property.distress_status === 'Court Foreclosure') {
+    bonusScore += 45;
+    preForeclosureSignals.push('Court foreclosure case - legal proceeding active');
+    additionalIndicators.push('🏛️ COURT FORECLOSURE - Highest Priority Legal Case');
+  } else if (property.distress_status === 'Tax Delinquent') {
+    bonusScore += 40;
+    taxDelinquencySignals.push('Tax delinquent - potential tax sale opportunity');
+    additionalIndicators.push('💰 TAX DELINQUENT - Tax Sale Opportunity');
+  } else if (property.distress_status === 'Foreclosure') {
     bonusScore += 35;
     preForeclosureSignals.push('Active foreclosure - immediate opportunity');
     additionalIndicators.push('🚨 FORECLOSURE ACTIVE - High Priority Lead');
@@ -247,7 +253,7 @@ function enhanceWithRuleBasedScoring(property, analysis) {
   // TAX DELINQUENCY INDICATORS
   const propertyDetails = (property.details || '').toLowerCase();
   const propertySource = (property.source || '').toLowerCase();
-  
+
   // Check for tax-related keywords in details
   if (propertyDetails.includes('tax') && (propertyDetails.includes('delinquent') || propertyDetails.includes('lien'))) {
     bonusScore += 25;
@@ -260,10 +266,19 @@ function enhanceWithRuleBasedScoring(property, analysis) {
     bonusScore += 20;
     taxDelinquencySignals.push('Legal notice publication - often tax sale related');
     additionalIndicators.push('📰 LEGAL NOTICE SOURCE - Tax Sale Potential');
+    preForeclosureSignals.push('High distress potential');
   }
 
-  // County records often contain tax information
-  if (propertySource.includes('county') || propertySource.includes('honolulu')) {
+  // Government sources are highest priority for tax and foreclosure data
+  if (propertySource.includes('ecourt') || propertySource.includes('court')) {
+    bonusScore += 30;
+    preForeclosureSignals.push('Court system record - active legal proceedings');
+    additionalIndicators.push('⚖️ COURT RECORD - Active Legal Case');
+  } else if (propertySource.includes('mfdr') || propertySource.includes('tax notice')) {
+    bonusScore += 35;
+    taxDelinquencySignals.push('Official tax notice - confirmed delinquency');
+    additionalIndicators.push('🏛️ OFFICIAL TAX NOTICE - Confirmed Delinquent');
+  } else if (propertySource.includes('county') || propertySource.includes('honolulu')) {
     bonusScore += 15;
     taxDelinquencySignals.push('County record source - tax payment history available');
     additionalIndicators.push('🏛️ COUNTY RECORD - Verify Tax Status');

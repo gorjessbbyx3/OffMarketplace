@@ -1,49 +1,32 @@
-
 const axios = require('axios');
 
-const BASE_URL = 'http://localhost:5000';
-
 async function testKakaakoSearch() {
-  console.log('🏢 Testing Kakaako Apartment Search...\n');
-
   try {
-    console.log('🔍 Searching for 4-unit apartment in Kakaako (pre-foreclosure, ~$2M)...');
-    
-    const response = await axios.get(`${BASE_URL}/api/test/kakaako-search`);
-    
-    console.log('✅ Kakaako search completed successfully!\n');
-    
-    // Display search criteria
-    console.log('📋 Search Criteria:');
-    console.log(`   Location: ${response.data.search_criteria.location}`);
-    console.log(`   Property Type: ${response.data.search_criteria.property_type}`);
-    console.log(`   Status: ${response.data.search_criteria.status}`);
-    console.log(`   Price Target: ${response.data.search_criteria.price_target}`);
-    console.log(`   Model Used: ${response.data.model}\n`);
-    
-    // Display search results preview
-    console.log('🏠 AI Search Results:');
-    console.log('─'.repeat(60));
-    console.log(response.data.search_results);
-    console.log('─'.repeat(60));
-    
-    // Test the enhanced Kakaako search endpoint if available
-    console.log('\n🤖 Testing enhanced AI analysis endpoint...');
-    
-    try {
-      const enhancedResponse = await axios.post(`${BASE_URL}/api/ai/find-kakaako-apartment`);
-      console.log('✅ Enhanced search completed!');
-      console.log('Database matches:', enhancedResponse.data.database_matches?.length || 0);
-      console.log('AI insights available:', !!enhancedResponse.data.ai_search_result);
-    } catch (enhancedError) {
-      console.log('ℹ️  Enhanced endpoint not available or requires different parameters');
+    console.log('🏠 Testing Kakaako property search...');
+
+    const response = await axios.post('http://localhost:5000/api/off-market/leads', {
+      location: 'Kakaako',
+      property_type: 'condo'
+    });
+
+    console.log('✅ Response received:', response.data);
+
+    if (response.data.success && response.data.leads) {
+      console.log(`Found ${response.data.leads.length} potential leads`);
+
+      response.data.leads.slice(0, 3).forEach((lead, index) => {
+        console.log(`\nLead ${index + 1}:`);
+        console.log(`Address: ${lead.address}`);
+        console.log(`Score: ${lead.off_market_score}`);
+        console.log(`Analysis: ${lead.off_market_analysis?.summary || 'No analysis'}`);
+      });
     }
-    
+
     console.log('\n🎉 Kakaako test completed successfully!');
 
   } catch (error) {
     console.error('❌ Kakaako test failed:', error.response?.data || error.message);
-    
+
     if (error.code === 'ECONNREFUSED') {
       console.log('\n💡 Make sure your server is running first. Click the Run button or run: npm run dev');
     } else if (error.response?.status === 500) {
@@ -52,4 +35,5 @@ async function testKakaakoSearch() {
   }
 }
 
+// Run the test
 testKakaakoSearch();

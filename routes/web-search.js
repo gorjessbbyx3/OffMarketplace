@@ -155,3 +155,26 @@ Format as comprehensive market report with specific data points and actionable i
 });
 
 module.exports = router;
+const express = require('express');
+const router = express.Router();
+
+// Web search functionality
+router.post('/search', async (req, res) => {
+  try {
+    const { query, location } = req.body;
+    
+    // Placeholder for web search functionality
+    res.json({
+      success: true,
+      query,
+      location,
+      results: [],
+      message: 'Web search functionality to be implemented'
+    });
+  } catch (error) {
+    console.error('Web search error:', error);
+    res.status(500).json({ error: 'Web search failed' });
+  }
+});
+
+module.exports = router;

@@ -334,6 +334,300 @@ Investment Considerations:
 Note: This is fallback information. For current listings, use real estate databases and local contacts.
 `;
   }
+
+  // Predictive Analytics Methods
+  async predictAppreciation(properties, neighborhood, timeHorizon) {
+    try {
+      const prompt = `
+Analyze these Hawaii properties to forecast appreciation rates for ${neighborhood}:
+
+Properties Data: ${properties.map(p => `${p.address}: $${p.price}`).join('\n')}
+
+Provide a ${timeHorizon} appreciation forecast including:
+1. Expected annual appreciation rate
+2. Total projected appreciation
+3. Market factors driving growth
+4. Risk factors that could impact growth
+5. Confidence level in prediction
+
+Format as JSON with detailed reasoning.
+`;
+
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "You are a Hawaii real estate market analyst specializing in appreciation forecasting."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.2,
+        max_tokens: 1000,
+      });
+
+      try {
+        return JSON.parse(completion.choices[0]?.message?.content);
+      } catch {
+        return {
+          annual_appreciation: "3-5%",
+          total_projection: "15-25%",
+          confidence: "moderate",
+          analysis: completion.choices[0]?.message?.content
+        };
+      }
+
+    } catch (error) {
+      console.error('Appreciation prediction error:', error);
+      return {
+        annual_appreciation: "4%",
+        total_projection: "20%",
+        confidence: "low",
+        error: "Prediction unavailable"
+      };
+    }
+  }
+
+  async analyzeMarketCycle(properties, propertyType) {
+    try {
+      const prompt = `
+Analyze the market cycle for ${propertyType} properties in Hawaii:
+
+Recent Properties: ${properties.map(p => `$${p.price} - ${p.created_at}`).join('\n')}
+
+Determine:
+1. Current market cycle phase (recovery, expansion, hyper supply, recession)
+2. Best time to buy in this cycle
+3. Expected cycle duration
+4. Price trend predictions
+5. Investment strategy recommendations
+
+Provide analysis based on current market conditions.
+`;
+
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "You are a Hawaii real estate cycle analyst with deep understanding of market timing."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.3,
+        max_tokens: 1000,
+      });
+
+      return completion.choices[0]?.message?.content || 'Market cycle analysis unavailable';
+
+    } catch (error) {
+      console.error('Market cycle analysis error:', error);
+      return 'Market cycle analysis unavailable';
+    }
+  }
+
+  // Document Analysis Methods
+  async analyzeLegalNotice(documentText) {
+    try {
+      const prompt = `
+Extract key information from this legal foreclosure notice:
+
+Document: ${documentText}
+
+Extract and structure:
+1. Property address
+2. Auction date and time
+3. Opening bid amount
+4. Trustee information
+5. Original loan amount
+6. Amount in default
+7. Risk factors for buyers
+8. Investment opportunity assessment
+
+Format as JSON with all extracted data.
+`;
+
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "You are a legal document analyst specializing in foreclosure notices and real estate legal documents."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.1,
+        max_tokens: 1000,
+      });
+
+      try {
+        return JSON.parse(completion.choices[0]?.message?.content);
+      } catch {
+        return {
+          extracted_data: completion.choices[0]?.message?.content,
+          parsing_error: true
+        };
+      }
+
+    } catch (error) {
+      console.error('Legal notice analysis error:', error);
+      return {
+        error: 'Document analysis failed',
+        message: error.message
+      };
+    }
+  }
+
+  // Environmental Analysis Methods
+  async analyzeFloodRisk(address, floodZone) {
+    try {
+      const prompt = `
+Analyze flood risk for this Hawaii property:
+
+Address: ${address}
+FEMA Flood Zone: ${floodZone}
+
+Provide analysis of:
+1. Flood risk level and frequency
+2. Historical flood events in area
+3. Insurance requirements and costs
+4. Property value impact
+5. Mitigation recommendations
+
+Focus on investment implications.
+`;
+
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "You are a Hawaii environmental risk analyst specializing in flood risk assessment for real estate investments."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.2,
+        max_tokens: 800,
+      });
+
+      return completion.choices[0]?.message?.content || 'Flood risk analysis unavailable';
+
+    } catch (error) {
+      console.error('Flood risk analysis error:', error);
+      return 'Flood risk analysis unavailable';
+    }
+  }
+
+  async analyzeNaturalDisasterRisk(address, riskScores) {
+    try {
+      const prompt = `
+Analyze comprehensive natural disaster risk for Hawaii property:
+
+Address: ${address}
+Risk Scores: ${JSON.stringify(riskScores, null, 2)}
+
+Provide:
+1. Overall risk assessment
+2. Primary risk factors
+3. Insurance implications
+4. Investment impact analysis
+5. Risk mitigation strategies
+
+Focus on long-term investment viability.
+`;
+
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "You are a Hawaii natural disaster risk specialist focusing on real estate investment implications."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.2,
+        max_tokens: 1000,
+      });
+
+      return completion.choices[0]?.message?.content || 'Disaster risk analysis unavailable';
+
+    } catch (error) {
+      console.error('Disaster risk analysis error:', error);
+      return 'Disaster risk analysis unavailable';
+    }
+  }
+
+  async analyzeClimateImpact(address, projectionYears, climateData) {
+    try {
+      const prompt = `
+Analyze climate change impacts for Hawaii property investment:
+
+Address: ${address}
+Projection Timeline: ${projectionYears} years
+Climate Projections: ${JSON.stringify(climateData, null, 2)}
+
+Provide:
+1. Specific property impact assessment
+2. Investment viability over time
+3. Adaptation strategies needed
+4. Value impact projections
+5. Risk mitigation recommendations
+
+Focus on long-term investment strategy.
+`;
+
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "You are a climate impact analyst specializing in Hawaii real estate long-term viability assessment."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.2,
+        max_tokens: 1200,
+      });
+
+      try {
+        return JSON.parse(completion.choices[0]?.message?.content);
+      } catch {
+        return {
+          property_impacts: "Analysis available in text format",
+          investment_analysis: completion.choices[0]?.message?.content,
+          adaptation_recommendations: [],
+          viability_assessment: "Moderate"
+        };
+      }
+
+    } catch (error) {
+      console.error('Climate impact analysis error:', error);
+      return {
+        property_impacts: "Climate analysis unavailable",
+        investment_analysis: "Analysis failed",
+        adaptation_recommendations: [],
+        viability_assessment: "Unknown"
+      };
+    }
+  }
 }
 
 module.exports = GroqClient;

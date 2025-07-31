@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { client } = require('../database/connection');
 const HawaiiPropertyScraper = require('../scrapers/hawaiiPropertyScraper');
+const RSSFeedScraper = require('../scrapers/rssFeedScraper');
 const axios = require('axios');
 const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
@@ -161,6 +162,83 @@ router.post('/scrape-hawaii', async (req, res) => {
     console.error('Error in scraping route:', error);
     res.status(500).json({ 
       error: 'Failed to scrape properties',
+      details: error.message 
+    });
+  }
+});
+
+// Scrape RSS feeds for Hawaii real estate news and opportunities
+router.post('/scrape-rss', async (req, res) => {
+  try {
+    console.log('Starting RSS feed scraping...');
+    
+    const rssScraper = new RSSFeedScraper();
+    const properties = await rssScraper.scrapeAllRSSFeeds();
+    
+    let newProperties = 0;
+    let errors = 0;
+    
+    // Save properties to database
+    for (const property of properties) {
+      try {
+        // Check if property already exists
+        const existingProperty = await client.execute({
+          sql: `SELECT id FROM properties WHERE 
+                (address = ? AND source = ?) OR 
+                (source_url = ? AND source_url IS NOT NULL)`,
+          args: [property.address, property.source, property.source_url]
+        });
+        
+        if (existingProperty.rows.length === 0) {
+          // Insert new property
+          await client.execute({
+            sql: `INSERT INTO properties (
+              address, price, property_type, source, source_url, title, 
+              description, distress_status, ai_insights, investment_score,
+              scraped_at, data_type, published_date, rss_category,
+              lead_type, opportunity_type, urgency_level
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            args: [
+              property.address || 'RSS Feed Property',
+              property.price || 0,
+              property.property_type || 'Commercial',
+              property.source,
+              property.source_url,
+              property.title,
+              property.description,
+              property.distress_status || 'Market Rate',
+              property.ai_insights,
+              property.investment_potential || 60,
+              property.scraped_at,
+              property.data_type,
+              property.published_date,
+              property.rss_category,
+              property.lead_type,
+              property.opportunity_type,
+              property.urgency_level
+            ]
+          });
+          newProperties++;
+        }
+      } catch (error) {
+        console.error('Error saving RSS property:', error);
+        errors++;
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `RSS feed scraping complete! Found ${properties.length} items with ${newProperties} new opportunities.`,
+      total_scraped: properties.length,
+      new_properties: newProperties,
+      errors: errors,
+      sources: ['Connect CRE Hawaii']
+    });
+    
+  } catch (error) {
+    console.error('Error in RSS scraping route:', error);
+    res.status(500).json({ 
+      error: 'Failed to scrape RSS feeds',
       details: error.message 
     });
   }

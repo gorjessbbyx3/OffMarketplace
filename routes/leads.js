@@ -54,3 +54,42 @@ router.put('/:id', async (req, res) => {
 });
 
 module.exports = router;
+const express = require('express');
+const router = express.Router();
+const { client } = require('../database/connection');
+
+// Get all leads
+router.get('/', async (req, res) => {
+  try {
+    const result = await client.execute(`
+      SELECT l.*, p.address, p.price, p.property_type 
+      FROM leads l 
+      JOIN properties p ON l.property_id = p.id 
+      ORDER BY l.created_at DESC
+    `);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching leads:', error);
+    res.status(500).json({ error: 'Failed to fetch leads' });
+  }
+});
+
+// Create new lead
+router.post('/', async (req, res) => {
+  try {
+    const { property_id, tag, notes } = req.body;
+    
+    const result = await client.execute({
+      sql: 'INSERT INTO leads (property_id, tag, notes) VALUES (?, ?, ?)',
+      args: [property_id, tag || '', notes || '']
+    });
+    
+    res.json({ success: true, id: result.lastInsertRowid });
+  } catch (error) {
+    console.error('Error creating lead:', error);
+    res.status(500).json({ error: 'Failed to create lead' });
+  }
+});
+
+module.exports = router;

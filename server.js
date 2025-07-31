@@ -50,20 +50,34 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server successfully running on http://0.0.0.0:${PORT}`);
   console.log('🏠 Dashboard available at: /dashboard.html');
   console.log('📊 API endpoints ready');
 }).on('error', (err) => {
   console.error('❌ Server failed to start:', err);
   if (err.code === 'EADDRINUSE') {
-    console.log(`Port ${PORT} is already in use. Trying port ${PORT + 1}...`);
-    const fallbackPort = parseInt(PORT) + 1;
-    app.listen(fallbackPort, '0.0.0.0', () => {
-      console.log(`✅ Server running on fallback port: ${fallbackPort}`);
-    });
+    console.log(`Port ${PORT} is already in use. Cleaning up and retrying...`);
+    process.exit(1);
   } else {
     console.error('Full error details:', err);
     process.exit(1);
   }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });

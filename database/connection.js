@@ -6,61 +6,6 @@ if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
   console.log('Falling back to local SQLite database');
 }
 
-// Create client with fallback to local database
-const client = createClient({
-  url: process.env.TURSO_DATABASE_URL || 'file:local.db',
-  authToken: process.env.TURSO_AUTH_TOKEN || undefined,
-});
-
-// Initialize database function
-async function initDatabase() {
-  try {
-    // Create properties table if it doesn't exist
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS properties (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        address TEXT,
-        zip TEXT,
-        property_type TEXT,
-        units INTEGER,
-        sqft INTEGER,
-        price REAL,
-        zoning TEXT,
-        distress_status TEXT,
-        str_revenue REAL,
-        str_roi REAL,
-        owner_name TEXT,
-        owner_contact TEXT,
-        photos TEXT,
-        source TEXT,
-        details TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Create leads table if it doesn't exist
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS leads (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        property_id INTEGER,
-        tag TEXT,
-        notes TEXT,
-        status TEXT DEFAULT 'active',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (property_id) REFERENCES properties (id)
-      )
-    `);
-
-    console.log('✅ Database tables initialized');
-    return true;
-  } catch (error) {
-    console.error('❌ Database initialization error:', error);
-    return false;
-  }
-}
-
-module.exports = { client, initDatabase };
-
 const client = createClient({
   url: process.env.TURSO_DATABASE_URL || 'file:local.db',
   authToken: process.env.TURSO_AUTH_TOKEN,
@@ -74,46 +19,80 @@ client.execute('SELECT 1').catch(err => {
 // Initialize database tables
 async function initDatabase() {
   try {
-    // Create properties table
-    await client.execute(`
-    CREATE TABLE IF NOT EXISTS properties (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      address TEXT NOT NULL,
-      zip TEXT NOT NULL,
-      property_type TEXT NOT NULL,
-      units INTEGER,
-      sqft INTEGER,
-      lot_size INTEGER,
-      price INTEGER,
-      zoning TEXT,
-      distress_status TEXT,
-      tenure TEXT,
-      distance_from_hnl REAL,
-      str_revenue INTEGER,
-      str_roi REAL,
-      owner_name TEXT,
-      owner_contact TEXT,
-      photos TEXT,
-      source TEXT,
-      ai_analysis TEXT,
-      raw_data TEXT,
-      analyzed_at DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+    console.log('🔧 Initializing database...');
 
-    // Create leads table
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS leads (
+    // Create properties table
+    await client.execute({
+      sql: `CREATE TABLE IF NOT EXISTS properties (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        property_id INTEGER,
-        tag TEXT,
-        notes TEXT,
-        status TEXT DEFAULT 'active',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (property_id) REFERENCES properties (id)
-      )
-    `);
+        address TEXT,
+        price REAL,
+        property_type TEXT,
+        details TEXT,
+        source TEXT,
+        investment_score REAL,
+        lead_score REAL,
+        distress_status TEXT,
+        contact_info TEXT,
+        off_market_score INTEGER DEFAULT 0,
+        units INTEGER,
+        sqft INTEGER,
+        analyzed_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`
+    });
+
+    // Initialize advanced AI feature tables
+    const fs = require('fs');
+    const path = require('path');
+
+    try {
+      const initScript = fs.readFileSync(path.join(__dirname, 'init-advanced-tables.sql'), 'utf8');
+      const statements = initScript.split(';').filter(stmt => stmt.trim());
+
+      for (const statement of statements) {
+        if (statement.trim()) {
+          await client.execute({ sql: statement });
+        }
+      }
+      console.log('✅ Advanced AI tables initialized');
+    } catch (error) {
+      console.log('⚠️ Advanced tables init script not found, creating manually...');
+
+      // Create advanced tables manually
+      await client.execute({
+        sql: `CREATE TABLE IF NOT EXISTS property_valuations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          property_id INTEGER,
+          estimated_value REAL,
+          equity_capture REAL,
+          repair_estimate REAL,
+          confidence_score INTEGER,
+          analysis_data TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`
+      });
+
+      await client.execute({
+        sql: `CREATE TABLE IF NOT EXISTS market_analytics (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          neighborhood TEXT,
+          forecast_data TEXT,
+          confidence_score INTEGER,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`
+      });
+
+      await client.execute({
+        sql: `CREATE TABLE IF NOT EXISTS document_analyses (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          document_type TEXT,
+          extracted_text TEXT,
+          analysis_data TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`
+      });
+    }
 
     console.log('Database tables initialized successfully');
   } catch (error) {

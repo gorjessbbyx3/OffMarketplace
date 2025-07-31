@@ -205,6 +205,322 @@ Note: Detailed analysis temporarily unavailable. Contact support if API issues p
       analysis_confidence: "moderate"
     };
   }
+
+  // Timing Analysis Methods
+  async analyzeOptimalTiming(property) {
+    try {
+      const prompt = `
+Analyze optimal acquisition timing for this Hawaii property:
+
+Property: ${property.address}
+Price: $${property.price?.toLocaleString()}
+Type: ${property.property_type}
+Status: ${property.distress_status || 'Standard'}
+
+Provide comprehensive timing analysis:
+
+1. CURRENT MARKET CONDITIONS
+   - Where we are in the market cycle
+   - Seasonal factors affecting pricing
+   - Local market dynamics
+
+2. PROPERTY-SPECIFIC TIMING FACTORS
+   - Seller motivation indicators
+   - Competition level assessment
+   - Urgency factors (foreclosure timeline, etc.)
+
+3. OPTIMAL ACQUISITION WINDOW
+   - Best time to make an offer
+   - Price negotiation timing
+   - Closing timeline recommendations
+
+4. RISK FACTORS
+   - Waiting risks vs. acting now
+   - Market timing risks
+   - Competition risks
+
+5. ACTION PLAN
+   - Immediate steps to take
+   - Timeline for decision making
+   - Backup strategies
+
+Format as detailed analysis with specific recommendations.
+`;
+
+      const message = await this.anthropic.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 1500,
+        temperature: 0.2,
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ]
+      });
+
+      return {
+        timing_analysis: message.content[0].text,
+        generated_at: new Date().toISOString(),
+        confidence_level: "high"
+      };
+
+    } catch (error) {
+      console.error('Optimal timing analysis error:', error);
+      return {
+        timing_analysis: "Market timing analysis suggests acting on strong opportunities quickly in Hawaii's competitive market.",
+        generated_at: new Date().toISOString(),
+        confidence_level: "low"
+      };
+    }
+  }
+
+  // Document Analysis Methods
+  async parseNOD(nodDocument) {
+    try {
+      const prompt = `
+Parse this Notice of Default (NOD) document and extract key information:
+
+Document: ${nodDocument}
+
+Extract and analyze:
+
+1. FINANCIAL DETAILS
+   - Total debt amount
+   - Monthly payment amount
+   - Amount in arrears
+   - Late fees and penalties
+   - Legal costs
+
+2. KEY DATES
+   - Date of default
+   - Cure period deadline
+   - Estimated sale date
+   - Notice recording date
+
+3. PROPERTY INFORMATION
+   - Property address
+   - Legal description
+   - Assessor's parcel number
+   - Current owner information
+
+4. LEGAL DETAILS
+   - Trustee information
+   - Beneficiary/lender details
+   - Deed of trust recording info
+   - Legal requirements for cure
+
+5. INVESTMENT OPPORTUNITY ASSESSMENT
+   - Opportunity score (1-10)
+   - Timeline urgency
+   - Potential acquisition strategies
+   - Risk factors
+   - Recommended actions
+
+Provide structured analysis with specific actionable insights.
+`;
+
+      const message = await this.anthropic.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 2000,
+        temperature: 0.1,
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ]
+      });
+
+      const analysis = message.content[0].text;
+
+      return {
+        parsed_nod: analysis,
+        default_date: this.extractDate(analysis, 'default'),
+        cure_deadline: this.extractDate(analysis, 'cure'),
+        estimated_sale_date: this.extractDate(analysis, 'sale'),
+        total_debt: this.extractAmount(analysis, 'debt'),
+        monthly_payment: this.extractAmount(analysis, 'payment'),
+        arrears_amount: this.extractAmount(analysis, 'arrears'),
+        opportunity_score: this.extractScore(analysis),
+        recommended_actions: this.extractActions(analysis),
+        generated_at: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error('NOD parsing error:', error);
+      return {
+        parsed_nod: "NOD parsing failed",
+        opportunity_score: 5,
+        recommended_actions: ["Manual review required"],
+        error: error.message
+      };
+    }
+  }
+
+  async analyzeContract(contractText, contractType) {
+    try {
+      const prompt = `
+Analyze this ${contractType} contract for a Hawaii real estate transaction:
+
+Contract Text: ${contractText}
+
+Provide comprehensive contract analysis:
+
+1. FAVORABLE TERMS
+   - Terms that benefit the buyer/investor
+   - Competitive advantages
+   - Cost savings opportunities
+
+2. UNFAVORABLE TERMS
+   - Terms that disadvantage the buyer
+   - Potential cost increases
+   - Risk factors
+
+3. RISK ASSESSMENT
+   - Overall risk level (Low/Medium/High)
+   - Specific risks identified
+   - Financial exposure
+   - Legal risks
+   - Performance risks
+
+4. RISK MITIGATION STRATEGIES
+   - Specific actions to reduce risks
+   - Contract amendments to request
+   - Due diligence steps required
+
+5. NEGOTIATION RECOMMENDATIONS
+   - Terms to renegotiate
+   - Contingencies to add/modify
+   - Timeline adjustments needed
+
+6. HAWAII-SPECIFIC CONSIDERATIONS
+   - Local law implications
+   - Hawaii real estate customs
+   - Regulatory compliance issues
+
+Provide actionable recommendations for contract optimization.
+`;
+
+      const message = await this.anthropic.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 2000,
+        temperature: 0.2,
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ]
+      });
+
+      const analysis = message.content[0].text;
+
+      return {
+        contract_analysis: analysis,
+        risk_level: this.extractRiskLevel(analysis),
+        identified_risks: this.extractRisks(analysis),
+        favorable_terms: this.extractFavorableTerms(analysis),
+        unfavorable_terms: this.extractUnfavorableTerms(analysis),
+        recommendations: this.extractRecommendations(analysis),
+        risk_mitigation: this.extractMitigation(analysis),
+        generated_at: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error('Contract analysis error:', error);
+      return {
+        contract_analysis: "Contract analysis failed",
+        risk_level: "Medium",
+        identified_risks: ["Manual review required"],
+        recommendations: ["Seek legal counsel"],
+        error: error.message
+      };
+    }
+  }
+
+  // Helper methods for data extraction
+  extractDate(text, type) {
+    // Simple regex patterns for date extraction
+    const patterns = {
+      default: /default.*?(\d{1,2}\/\d{1,2}\/\d{4})/i,
+      cure: /cure.*?(\d{1,2}\/\d{1,2}\/\d{4})/i,
+      sale: /sale.*?(\d{1,2}\/\d{1,2}\/\d{4})/i
+    };
+    
+    const match = text.match(patterns[type]);
+    return match ? match[1] : null;
+  }
+
+  extractAmount(text, type) {
+    const patterns = {
+      debt: /total debt.*?\$?([\d,]+)/i,
+      payment: /monthly payment.*?\$?([\d,]+)/i,
+      arrears: /arrears.*?\$?([\d,]+)/i
+    };
+    
+    const match = text.match(patterns[type]);
+    return match ? match[1] : null;
+  }
+
+  extractScore(text) {
+    const match = text.match(/score.*?(\d+)/i);
+    return match ? parseInt(match[1]) : 5;
+  }
+
+  extractActions(text) {
+    const actionMatch = text.match(/recommended actions?:?\s*(.*?)(?:\n\n|\n[A-Z]|$)/is);
+    if (actionMatch) {
+      return actionMatch[1].split('\n').filter(line => line.trim()).map(line => line.replace(/^[-•]\s*/, ''));
+    }
+    return ["Review document manually"];
+  }
+
+  extractRiskLevel(text) {
+    if (text.toLowerCase().includes('high risk')) return 'High';
+    if (text.toLowerCase().includes('low risk')) return 'Low';
+    return 'Medium';
+  }
+
+  extractRisks(text) {
+    const riskMatch = text.match(/risks?.*?:(.*?)(?:\n\n|\n[A-Z]|$)/is);
+    if (riskMatch) {
+      return riskMatch[1].split('\n').filter(line => line.trim()).map(line => line.replace(/^[-•]\s*/, ''));
+    }
+    return ["Manual risk assessment needed"];
+  }
+
+  extractFavorableTerms(text) {
+    const match = text.match(/favorable.*?:(.*?)(?:\n\n|\n[A-Z]|$)/is);
+    if (match) {
+      return match[1].split('\n').filter(line => line.trim()).map(line => line.replace(/^[-•]\s*/, ''));
+    }
+    return ["Manual review of favorable terms needed"];
+  }
+
+  extractUnfavorableTerms(text) {
+    const match = text.match(/unfavorable.*?:(.*?)(?:\n\n|\n[A-Z]|$)/is);
+    if (match) {
+      return match[1].split('\n').filter(line => line.trim()).map(line => line.replace(/^[-•]\s*/, ''));
+    }
+    return ["Manual review of unfavorable terms needed"];
+  }
+
+  extractRecommendations(text) {
+    const match = text.match(/recommendation.*?:(.*?)(?:\n\n|\n[A-Z]|$)/is);
+    if (match) {
+      return match[1].split('\n').filter(line => line.trim()).map(line => line.replace(/^[-•]\s*/, ''));
+    }
+    return ["Seek professional advice"];
+  }
+
+  extractMitigation(text) {
+    const match = text.match(/mitigation.*?:(.*?)(?:\n\n|\n[A-Z]|$)/is);
+    if (match) {
+      return match[1].split('\n').filter(line => line.trim()).map(line => line.replace(/^[-•]\s*/, ''));
+    }
+    return ["Standard risk mitigation practices"];
+  }
 }
 
 module.exports = AnthropicClient;
