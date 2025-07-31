@@ -6,7 +6,7 @@ let client;
 if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
   console.warn('Missing required environment variables: TURSO_DATABASE_URL and TURSO_AUTH_TOKEN');
   console.log('Falling back to local SQLite database');
-  
+
   // Create local SQLite client
   client = createClient({
     url: 'file:./dev.db'
@@ -82,27 +82,19 @@ async function initDatabase() {
       )
     `);
 
-    // Create authentication tables
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+    // Create default admin user if it doesn't exist
+    const existingAdmin = await client.execute({
+      sql: 'SELECT id FROM users WHERE username = ?',
+      args: ['admin']
+    });
 
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS user_sessions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        token TEXT UNIQUE NOT NULL,
-        expires_at DATETIME NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id)
-      )
-    `);
+    if (existingAdmin.rows.length === 0) {
+      await client.execute({
+        sql: 'INSERT INTO users (username, password, email) VALUES (?, ?, ?)',
+        args: ['admin', 'admin123', 'admin@example.com']
+      });
+      console.log('✅ Default admin user created: admin/admin123');
+    }
 
     console.log('Database initialized successfully');
   } catch (error) {
