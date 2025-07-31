@@ -354,12 +354,6 @@ function scoreMarketFactors(property) {
   };
 }
 
-module.exports = router;
-
-const express = require('express');
-const router = express.Router();
-const { client } = require('../database/connection');
-
 // Score property characteristics
 function scorePropertyCharacteristics(property) {
   let score = 0;
@@ -431,13 +425,10 @@ function calculateAcquisitionProbability(totalScore, distressIndicators) {
   probability = Math.min(probability, 95);
   
   return {
-    probability: probability,
+    probability: Math.round(probability),
     confidence: distressIndicators.length >= 2 ? 'High' : 'Medium',
     reasoning: `Based on ${distressIndicators.length} distress indicators and score of ${totalScore}`
   };
-}probability, 95);
-  
-  return Math.round(probability);
 }
 
 // Determine urgency level
