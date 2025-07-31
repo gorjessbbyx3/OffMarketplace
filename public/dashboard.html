@@ -471,14 +471,20 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <label for="zipCode" class="form-label">Zip Code</label>
-                                <select class="form-select" id="zipCode">
+                                <select class="form-select" id="zipCode" onchange="handleZipCodeChange()">
                                     <option value="">All Zip Codes</option>
-                                    <option value="96814">96814</option>
-                                    <option value="96815">96815</option>
-                                    <option value="96826">96826</option>
-                                    <option value="96813">96813</option>
-                                    <option value="96817">96817</option>
+                                    <option value="96814">96814 (Kakaako)</option>
+                                    <option value="96815">96815 (Waikiki)</option>
+                                    <option value="96826">96826 (Hawaii Kai)</option>
+                                    <option value="96813">96813 (Downtown)</option>
+                                    <option value="96817">96817 (Kalihi)</option>
+                                    <option value="96816">96816 (Kaimuki)</option>
+                                    <option value="96818">96818 (Pearl City)</option>
+                                    <option value="96819">96819 (Aiea)</option>
+                                    <option value="96825">96825 (Hawaii Kai)</option>
+                                    <option value="custom">Enter Custom Zip Code</option>
                                 </select>
+                                <input type="text" class="form-control mt-2" id="customZipCode" placeholder="Enter zip code (e.g. 96822)" style="display: none;" maxlength="5" pattern="[0-9]{5}">
                             </div>
                             <div class="col-md-6">
                                 <label for="propertyType" class="form-label">Property Type</label>

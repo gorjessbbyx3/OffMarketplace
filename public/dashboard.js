@@ -76,8 +76,18 @@ class PropertyDashboard {
     }
 
     async searchProperties() {
+        const zipSelect = document.getElementById('zipCode');
+        const customZipInput = document.getElementById('customZipCode');
+        
+        let zipValue = zipSelect.value;
+        if (zipValue === 'custom' && customZipInput.value.trim()) {
+            zipValue = customZipInput.value.trim();
+        } else if (zipValue === 'custom') {
+            zipValue = '';
+        }
+        
         const filters = {
-            zip: document.getElementById('zipCode').value,
+            zip: zipValue,
             property_type: document.getElementById('propertyType').value,
             max_price: document.getElementById('maxPrice').value,
             distress_status: document.getElementById('distressStatus').value,
@@ -646,6 +656,8 @@ async function searchProperties() {
 // Clear search filters
 function clearFilters() {
     document.getElementById('zipCode').value = '';
+    document.getElementById('customZipCode').value = '';
+    document.getElementById('customZipCode').style.display = 'none';
     document.getElementById('propertyType').value = '';
     document.getElementById('maxPrice').value = '';
     document.getElementById('distressStatus').value = '';
@@ -695,6 +707,20 @@ async function scrapeHawaiiProperties() {
     } catch (error) {
         console.error('Scraping error:', error);
         dashboard.addMessage('Scraping failed. Please check the server status.', 'ai');
+    }
+}
+
+// Handle zip code dropdown change
+function handleZipCodeChange() {
+    const zipSelect = document.getElementById('zipCode');
+    const customZipInput = document.getElementById('customZipCode');
+    
+    if (zipSelect.value === 'custom') {
+        customZipInput.style.display = 'block';
+        customZipInput.focus();
+    } else {
+        customZipInput.style.display = 'none';
+        customZipInput.value = '';
     }
 }
 
