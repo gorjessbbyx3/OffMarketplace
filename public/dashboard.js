@@ -490,6 +490,10 @@ Try asking: "Find me a duplex in Kakaako under $1M" or "What's the current marke
             console.error('Error adding lead:', error);
         }
     }
+
+    viewDetailedAnalysis(propertyId) {
+        this.addMessage(`Viewing detailed analysis for property ${propertyId}. This would show comprehensive tenant revenue calculations, lease information, condition assessment, and investment strategy recommendations.`, 'ai');
+    }
 }
 
 // Global functions for button clicks
@@ -857,6 +861,110 @@ async function findOffMarketLeads() {
     } catch (error) {
         console.error('Off-market leads error:', error);
         dashboard.addMessage('Error finding off-market leads. Please try again.', 'ai');
+    }
+}
+
+// Find off-market properties with enhanced analysis
+async function findOffMarketProperties() {
+    dashboard.addMessage('🏠 Searching for off-market properties with comprehensive analysis...', 'ai');
+    
+    try {
+        const response = await fetch('/api/off-market/find-off-market-leads', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.leads && data.leads.length > 0) {
+            // Display properties in the main container
+            const container = document.getElementById('propertiesContainer');
+            const countBadge = document.getElementById('resultsCount');
+            
+            countBadge.textContent = `${data.leads.length} off-market properties`;
+            
+            container.innerHTML = data.leads.map(property => {
+                const tenantAnalysis = property.tenant_revenue_analysis || {};
+                const leaseAnalysis = property.lease_analysis || {};
+                const conditionAssessment = property.condition_assessment || {};
+                
+                return `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="property-card border-${property.urgency_level === 'critical' ? 'danger' : property.urgency_level === 'high' ? 'warning' : 'primary'}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">${property.address}</h6>
+                                <span class="badge bg-${property.urgency_level === 'critical' ? 'danger' : property.urgency_level === 'high' ? 'warning' : 'info'}">
+                                    ${property.off_market_score}/100
+                                </span>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-6">
+                                    <small class="text-muted">Price:</small><br>
+                                    <strong>$${Number(property.price || 0).toLocaleString()}</strong>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Type:</small><br>
+                                    ${property.property_type || 'N/A'}
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-2">
+                                <div class="col-6">
+                                    <small class="text-muted">Tenure:</small><br>
+                                    ${leaseAnalysis.tenure_type?.replace('_', ' ') || 'Unknown'}
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Condition:</small><br>
+                                    ${conditionAssessment.property_condition?.replace('_', ' ') || 'TBD'}
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-2">
+                                <div class="col-6">
+                                    <small class="text-muted">Est. Rent:</small><br>
+                                    ${tenantAnalysis.estimated_monthly_rent || 'Analyzing...'}
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Strategy:</small><br>
+                                    ${conditionAssessment.investment_strategy || 'TBD'}
+                                </div>
+                            </div>
+                            
+                            <div class="mt-2">
+                                <small class="text-muted">Source:</small> ${property.source || 'N/A'}<br>
+                                <small class="text-muted">Urgency:</small> 
+                                <span class="badge bg-${property.urgency_level === 'critical' ? 'danger' : property.urgency_level === 'high' ? 'warning' : 'info'}">
+                                    ${property.urgency_level?.toUpperCase()}
+                                </span>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <button class="btn btn-sm btn-success" onclick="dashboard.openROICalculator(${property.id})">
+                                    <i class="fas fa-calculator"></i> ROI
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="dashboard.addToLeads('${property.id}')">
+                                    <i class="fas fa-star"></i> Lead
+                                </button>
+                                <button class="btn btn-sm btn-info" onclick="dashboard.viewDetailedAnalysis('${property.id}')">
+                                    <i class="fas fa-chart-line"></i> Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            dashboard.addMessage(`🎯 Found ${data.leads.length} off-market properties! Analyzed ${data.total_analyzed} properties with comprehensive tenant revenue, lease analysis, and condition assessments.`, 'ai');
+        } else {
+            dashboard.addMessage('No off-market properties found in current data. Try scraping new properties first.', 'ai');
+        }
+
+    } catch (error) {
+        console.error('Off-market properties error:', error);
+        dashboard.addMessage('Error finding off-market properties. Please try again.', 'ai');
     }
 }
 

@@ -40,9 +40,14 @@ app.use('/api/test', require('./routes/test-groq'));
 app.use('/api/search', webSearchRoutes);
 app.use('/api/off-market', offMarketLeadsRoutes);
 
-// Serve React app
+// Serve dashboard as default landing page
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+// Serve other static files
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 app.listen(PORT, '0.0.0.0', () => {
