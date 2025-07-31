@@ -21,6 +21,7 @@ app.use('/api/scraper', require('./routes/scraper'));
 app.use('/api/properties', require('./routes/properties'));
 app.use('/api/leads', require('./routes/leads'));
 app.use('/api/ai', require('./routes/ai-analysis'));
+app.use('/api/test', require('./routes/test-groq'));
 
 // Serve React app
 app.get('*', (req, res) => {
