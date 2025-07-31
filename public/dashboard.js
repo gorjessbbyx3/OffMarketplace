@@ -976,6 +976,59 @@ document.addEventListener('DOMContentLoaded', function() {
     dashboard = new PropertyDashboard();
 });
 
+// Missing utility functions
+function showLoading(message = 'Loading...') {
+    const loadingDiv = document.getElementById('loadingIndicator') || createLoadingIndicator();
+    loadingDiv.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">${message}</p>
+        </div>
+    `;
+    loadingDiv.style.display = 'block';
+}
+
+function hideLoading() {
+    const loadingDiv = document.getElementById('loadingIndicator');
+    if (loadingDiv) {
+        loadingDiv.style.display = 'none';
+    }
+}
+
+function createLoadingIndicator() {
+    const div = document.createElement('div');
+    div.id = 'loadingIndicator';
+    div.className = 'position-fixed top-50 start-50 translate-middle';
+    div.style.zIndex = '9999';
+    document.body.appendChild(div);
+    return div;
+}
+
+function addMessage(type, message) {
+    if (dashboard) {
+        dashboard.addMessage(message, type === 'system' ? 'ai' : type);
+    }
+}
+
+// Copy report function
+function copyReport(propertyId) {
+    // Get the report content
+    const reportCard = document.querySelector(`[data-property-id="${propertyId}"]`);
+    if (reportCard) {
+        const reportText = reportCard.innerText;
+        navigator.clipboard.writeText(reportText).then(() => {
+            alert('Report copied to clipboard!');
+        }).catch(() => {
+            alert('Failed to copy report');
+        });
+    }
+}
+
+// Export report function
+function exportReport(propertyId) {
+    alert(`Exporting report for property ${propertyId} as PDF. This would integrate with a PDF generation library.`);
+}
+
 async function generateDetailedReports() {
     try {
         showLoading('🤖 Analyzing with GROQ AI and 🧠 generating detailed reports with Anthropic AI...');
@@ -1009,6 +1062,12 @@ async function generateDetailedReports() {
 
 function displayDetailedReports(data) {
     const resultsDiv = document.getElementById('results');
+    const resultsContainer = document.getElementById('resultsContainer');
+    
+    // Show the results container
+    if (resultsContainer) {
+        resultsContainer.style.display = 'block';
+    }
 
     let html = `
         <div class="reports-header">
@@ -1038,7 +1097,7 @@ function displayDetailedReports(data) {
         const scoreClass = score >= 7 ? 'high-score' : score >= 5 ? 'medium-score' : 'low-score';
 
         html += `
-            <div class="report-card ${scoreClass}">
+            <div class="report-card ${scoreClass}" data-property-id="${report.property_id || report.id}">
                 <div class="report-header">
                     <h4>${report.address}</h4>
                     <div class="dual-scores">
@@ -1079,8 +1138,11 @@ function displayDetailedReports(data) {
                 </div>
 
                 <div class="report-actions">
-                    <button onclick="copyReport('${report.property_id}')" class="btn-copy">📋 Copy Report</button>
-                    <button onclick="exportReport('${report.property_id}')" class="btn-export">📄 Export PDF</button>
+                    <button onclick="copyReport('${report.property_id || report.id}')" class="btn-copy">📋 Copy Report</button>
+                    <button onclick="exportReport('${report.property_id || report.id}')" class="btn-export">📄 Export PDF</button>
+                    <button onclick="dashboard.addToLeads('${report.property_id || report.id}')" class="btn btn-sm btn-success ms-2">
+                        <i class="fas fa-star"></i> Add to Leads
+                    </button>
                 </div>
             </div>
         `;
