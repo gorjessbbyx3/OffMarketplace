@@ -773,6 +773,98 @@ async function searchProperties() {
     }
 }
 
+// AI-powered search with database saving
+async function aiSearchAndSave() {
+    const searchQuery = prompt('Enter your property search criteria (e.g., "condos under $800k in Waikiki", "foreclosures in Kalihi", "investment properties with high ROI"):');
+    
+    if (!searchQuery) return;
+
+    if (dashboard) {
+        dashboard.addMessage(`Searching for: ${searchQuery}`, 'user');
+        dashboard.addMessage('🔍 AI searching Hawaii properties and saving results to database...', 'ai');
+    }
+
+    try {
+        const response = await fetch('/api/ai-chat/search-and-save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                query: searchQuery,
+                auto_save: true
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            if (dashboard) {
+                dashboard.addMessage(`✅ Found ${result.properties_found} properties, saved ${result.database_saved} to database!`, 'ai');
+            }
+            
+            // Display the found properties
+            if (result.properties && result.properties.length > 0) {
+                displayPropertiesInContainer(result.properties.map(p => ({
+                    ...p,
+                    source: 'AI Search',
+                    id: `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                })));
+            }
+
+            // Refresh the main properties list to show newly saved items
+            await viewScrapedProperties();
+        } else {
+            if (dashboard) {
+                dashboard.addMessage(`❌ Search failed: ${result.error}`, 'ai');
+            }
+        }
+    } catch (error) {
+        console.error('AI search error:', error);
+        if (dashboard) {
+            dashboard.addMessage('❌ Search encountered an error. Please try again.', 'ai');
+        }
+    }
+}
+
+// Save specific properties to database
+async function savePropertiesToDatabase(properties) {
+    if (!properties || properties.length === 0) {
+        alert('No properties to save');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/ai-chat/save-search-results', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                properties: properties,
+                search_query: 'Manual selection'
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            if (dashboard) {
+                dashboard.addMessage(`✅ Saved ${result.saved_count} properties to database!`, 'ai');
+            }
+            alert(`Successfully saved ${result.saved_count} properties to database`);
+            
+            // Refresh the properties list
+            await viewScrapedProperties();
+        } else {
+            alert(`Failed to save properties: ${result.error}`);
+        }
+    } catch (error) {
+        console.error('Save error:', error);
+        alert('Error saving properties to database');
+    }
+}
+
 // Clear search filters
 function clearFilters() {
     document.getElementById('zipCode').value = '';

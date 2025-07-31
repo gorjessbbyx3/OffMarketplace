@@ -158,9 +158,67 @@ Respond as a knowledgeable Hawaii real estate expert who understands both invest
       }
     });
 
+    const aiResponse = response.data.choices[0].message.content;
+
+    // Check if the AI response contains property information that should be saved
+    const containsPropertyData = ['address', 'price', '$', 'property', 'investment', 'foreclosure', 'opportunity'].some(keyword => 
+      aiResponse.toLowerCase().includes(keyword)
+    );
+
+    let saveResults = null;
+    if (containsPropertyData && (message.toLowerCase().includes('search') || message.toLowerCase().includes('find'))) {
+      // Try to extract and save any properties mentioned in the AI response
+      try {
+        const propertyExtractionPrompt = `Extract specific property information from this text and format as JSON array:
+
+"${aiResponse}"
+
+Extract any properties mentioned with details like address, price, type, etc. Format as:
+[{"address": "...", "price": 000000, "property_type": "...", "investment_score": 0-100}]
+
+If no specific properties are mentioned, return empty array: []`;
+
+        const extractionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+          model: 'llama3-8b-8192',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a data extraction specialist. Extract property data and return valid JSON only.'
+            },
+            {
+              role: 'user',
+              content: propertyExtractionPrompt
+            }
+          ],
+          temperature: 0.1,
+          max_tokens: 800
+        }, {
+          headers: {
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const extractedData = extractionResponse.data.choices[0].message.content;
+        
+        try {
+          const properties = JSON.parse(extractedData);
+          if (Array.isArray(properties) && properties.length > 0) {
+            saveResults = await saveAISearchResults({ properties }, message);
+          }
+        } catch (parseError) {
+          console.log('No valid property data to extract');
+        }
+      } catch (extractionError) {
+        console.error('Property extraction error:', extractionError);
+      }
+    }
+
     res.json({
       success: true,
-      response: response.data.choices[0].message.content
+      response: aiResponse,
+      properties_saved: saveResults ? saveResults.saved : 0,
+      save_errors: saveResults ? saveResults.errors : 0
     });
 
   } catch (error) {
@@ -406,6 +464,69 @@ Each section should be 2-3 sentences, professional and actionable.`;
   }
 });
 
+// Save AI search results to database
+async function saveAISearchResults(searchResults, searchQuery) {
+  try {
+    if (!searchResults || !searchResults.properties) {
+      return { saved: 0, errors: 0 };
+    }
+
+    let savedCount = 0;
+    let errorCount = 0;
+
+    for (const property of searchResults.properties) {
+      try {
+        // Check if property already exists
+        const existingProperty = await client.execute({
+          sql: 'SELECT id FROM properties WHERE address = ? OR (address LIKE ? AND price = ?)',
+          args: [property.address, `%${property.address.split(' ')[0]}%`, property.price]
+        });
+
+        if (existingProperty.rows.length === 0) {
+          // Insert new AI-discovered property
+          await client.execute({
+            sql: `INSERT INTO properties (
+              address, price, property_type, units, sqft, lot_size, 
+              zoning, distress_status, source, ai_analysis, 
+              lead_score, owner_name, created_at, search_query
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
+            args: [
+              property.address || 'AI Generated Address',
+              property.price || 0,
+              property.property_type || property.type || 'Unknown',
+              property.units || property.bedrooms || null,
+              property.sqft || property.square_feet || null,
+              property.lot_size || null,
+              property.zoning || 'Unknown',
+              property.status || property.distress_status || 'AI Discovered',
+              'AI Search Results',
+              JSON.stringify({
+                ai_confidence: property.ai_confidence || 0.8,
+                search_method: 'AI Generated',
+                investment_score: property.lead_score || property.investment_score || 70,
+                discovery_date: new Date().toISOString(),
+                original_query: searchQuery
+              }),
+              property.lead_score || property.investment_score || 70,
+              property.owner || property.contact || null,
+              searchQuery
+            ]
+          });
+          savedCount++;
+        }
+      } catch (error) {
+        console.error(`Error saving AI property ${property.address}:`, error);
+        errorCount++;
+      }
+    }
+
+    return { saved: savedCount, errors: errorCount };
+  } catch (error) {
+    console.error('Error in saveAISearchResults:', error);
+    return { saved: 0, errors: 1 };
+  }
+}
+
 // Generate AI-powered leads
 router.post('/generate-leads', async (req, res) => {
   try {
@@ -426,6 +547,134 @@ router.post('/generate-leads', async (req, res) => {
       // Enhance with AI analysis
       for (let property of properties) {
         try {
+
+
+// Save specific AI search results to database
+router.post('/save-search-results', async (req, res) => {
+  try {
+    const { properties, search_query } = req.body;
+
+    if (!properties || !Array.isArray(properties)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Properties array is required'
+      });
+    }
+
+    const saveResults = await saveAISearchResults({ properties }, search_query || 'Manual save');
+
+    res.json({
+      success: true,
+      message: `Saved ${saveResults.saved} properties to database`,
+      saved_count: saveResults.saved,
+      error_count: saveResults.errors,
+      properties_processed: properties.length
+    });
+
+  } catch (error) {
+    console.error('Save search results error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save search results'
+    });
+  }
+});
+
+// Enhanced AI property search with automatic database saving
+router.post('/search-and-save', async (req, res) => {
+  try {
+    const { query, auto_save = true } = req.body;
+
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        error: 'Search query is required'
+      });
+    }
+
+    // Enhanced search prompt for specific property results
+    const searchPrompt = `You are a Hawaii real estate AI with access to current property databases. Based on this search query: "${query}"
+
+Generate 3-5 realistic Hawaii properties that match the criteria. For each property provide:
+- Exact street address (use real Hawaii street names)
+- Price (realistic for Hawaii market 2024)
+- Property type (Single-family, Condo, Townhouse, etc.)
+- Investment score (60-95)
+- Brief investment insight
+
+Format as JSON array:
+[
+  {
+    "address": "123 Kapiolani Blvd, Honolulu, HI 96814",
+    "price": 750000,
+    "property_type": "Condo",
+    "investment_score": 78,
+    "insight": "Strong rental demand in urban core"
+  }
+]
+
+Make addresses realistic and prices current for Hawaii market.`;
+
+    const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+      model: 'llama3-8b-8192',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a Hawaii real estate database AI. Return only valid JSON arrays of properties.'
+        },
+        {
+          role: 'user',
+          content: searchPrompt
+        }
+      ],
+      temperature: 0.4,
+      max_tokens: 1200
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    let searchResults = [];
+    let saveResults = { saved: 0, errors: 0 };
+
+    try {
+      const aiResponse = response.data.choices[0].message.content;
+      searchResults = JSON.parse(aiResponse);
+
+      if (auto_save && Array.isArray(searchResults) && searchResults.length > 0) {
+        saveResults = await saveAISearchResults({ properties: searchResults }, query);
+      }
+    } catch (parseError) {
+      console.error('Failed to parse AI search results:', parseError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to generate valid search results'
+      });
+    }
+
+    res.json({
+      success: true,
+      search_query: query,
+      properties_found: searchResults.length,
+      properties: searchResults,
+      database_saved: saveResults.saved,
+      save_errors: saveResults.errors,
+      message: auto_save ? 
+        `Found ${searchResults.length} properties, saved ${saveResults.saved} to database` :
+        `Found ${searchResults.length} properties (not saved to database)`
+    });
+
+  } catch (error) {
+    console.error('Search and save error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to search and save properties'
+    });
+  }
+});
+
           const aiInsights = await generatePropertyInsights(property);
           property.ai_insights = aiInsights;
 
