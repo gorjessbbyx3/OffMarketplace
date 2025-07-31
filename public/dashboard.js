@@ -724,6 +724,33 @@ function handleZipCodeChange() {
     }
 }
 
+// Find off-market leads
+async function findOffMarketLeads() {
+    dashboard.addMessage('🔍 Analyzing properties for off-market opportunities...', 'ai');
+    
+    try {
+        const response = await fetch('/api/off-market-leads/find-off-market-leads', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.leads && data.leads.length > 0) {
+            dashboard.displayOffMarketLeads(data.leads);
+            dashboard.addMessage(`🎯 Found ${data.leads.length} off-market opportunities! Analyzed ${data.total_analyzed} properties. ${data.market_summary}`, 'ai');
+        } else {
+            dashboard.addMessage('No high-potential off-market opportunities found in current data. Try scraping new properties first.', 'ai');
+        }
+
+    } catch (error) {
+        console.error('Off-market leads error:', error);
+        dashboard.addMessage('Error finding off-market leads. Please try again.', 'ai');
+    }
+}
+
 // Initialize dashboard when page loads
 let dashboard;
 document.addEventListener('DOMContentLoaded', function() {
