@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -16,15 +15,20 @@ app.use(express.static(path.join(__dirname, 'public')));
 const propertyRoutes = require('./routes/properties');
 const leadRoutes = require('./routes/leads');
 const scraperRoutes = require('./routes/scraper');
+const aiAnalysisRoutes = require('./routes/ai-analysis');
+const imageScraper = require('./routes/image-scraper');
+const aiChatRoutes = require('./routes/ai-chat');
+const webSearchRoutes = require('./routes/web-search');
 
 // Routes
-app.use('/api/properties', require('./routes/properties'));
-app.use('/api/leads', require('./routes/leads'));
-app.use('/api/ai', require('./routes/ai-analysis'));
-app.use('/api/ai', require('./routes/ai-chat'));
-app.use('/api/scraper', require('./routes/scraper'));
+app.use('/api/properties', propertyRoutes);
+app.use('/api/leads', leadRoutes);
+app.use('/api/scraper', scraperRoutes);
+app.use('/api/ai', aiAnalysisRoutes);
+app.use('/api/ai', aiChatRoutes);
 app.use('/api/scraper', require('./routes/image-scraper'));
 app.use('/api/test', require('./routes/test-groq'));
+app.use('/api/search', webSearchRoutes);
 
 // Serve React app
 app.get('*', (req, res) => {

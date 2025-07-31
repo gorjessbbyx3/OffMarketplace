@@ -6,6 +6,99 @@ const axios = require('axios');
 const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
 
+// Web search function (using DuckDuckGo as an example)
+async function webSearch(query) {
+    try {
+        const response = await axios.get(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json`);
+        return response.data.RelatedTopics.map(topic => topic.Text);
+    } catch (error) {
+        console.error('Web search error:', error);
+        return ['Web search failed.'];
+    }
+}
+
+// Enhanced AI Analysis function using GROQ with web search
+async function analyzePropertyWithAI(property) {
+  try {
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) {
+      console.warn('GROQ API key not found, using fallback analysis');
+      return fallbackAnalysis(property);
+    }
+
+    // Integrate web search to enrich property analysis
+    const searchQuery = `${property.address} Hawaii real estate market analysis`;
+    const searchResults = await webSearch(searchQuery);
+    const webContext = searchResults.join('\n');
+
+    const prompt = `Analyze this Hawaii property for investment potential:
+
+Property Details:
+- Address: ${property.address}
+- Price: $${property.price?.toLocaleString() || 'N/A'}
+- Type: ${property.property_type}
+- Status: ${property.distress_status || 'Unknown'}
+- Source: ${property.source}
+
+Web Search Context:
+${webContext}
+
+Please provide a JSON response with:
+1. investment_score (0-100)
+2. estimated_roi (percentage)
+3. market_trends (brief insight)
+4. risk_factors (array of potential risks)
+5. opportunity_score (0-100)
+6. ai_insights (investment recommendation)
+7. off_market_potential (likelihood this is or will become off-market)
+
+Focus on Hawaii real estate market conditions, tourism impact, and off-market opportunities.`;
+
+    const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+      model: 'llama3-8b-8192',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a Hawaii real estate investment expert specializing in identifying off-market opportunities and distressed properties. Use web search data to enhance your analysis. Respond only with valid JSON.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 1000
+    }, {
+      headers: {
+        'Authorization': `Bearer ${groqApiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    let analysis;
+    try {
+      analysis = JSON.parse(response.data.choices[0].message.content);
+    } catch (parseError) {
+      console.error('Error parsing GROQ response:', parseError);
+      return fallbackAnalysis(property);
+    }
+
+    return {
+      ...property,
+      ai_analysis: {
+        ...analysis,
+        analyzed_by: 'GROQ AI',
+        model: 'llama3-8b-8192'
+      },
+      analyzed_at: new Date().toISOString()
+    };
+
+  } catch (error) {
+    console.error('GROQ AI analysis error:', error);
+    return fallbackAnalysis(property);
+  }
+}
+
 // Trigger scraping of Hawaii properties
 router.post('/scrape-hawaii', async (req, res) => {
   try {
@@ -241,80 +334,6 @@ Respond with JSON: {"off_market_score": number, "reasoning": "explanation", "act
       reasoning: 'AI analysis unavailable',
       source: 'fallback' 
     };
-  }
-}
-
-// AI Analysis function using GROQ
-async function analyzePropertyWithAI(property) {
-  try {
-    const groqApiKey = process.env.GROQ_API_KEY;
-    if (!groqApiKey) {
-      console.warn('GROQ API key not found, using fallback analysis');
-      return fallbackAnalysis(property);
-    }
-
-    const prompt = `Analyze this Hawaii property for investment potential:
-
-Property Details:
-- Address: ${property.address}
-- Price: $${property.price?.toLocaleString() || 'N/A'}
-- Type: ${property.property_type}
-- Status: ${property.distress_status || 'Unknown'}
-- Source: ${property.source}
-
-Please provide a JSON response with:
-1. investment_score (0-100)
-2. estimated_roi (percentage)
-3. market_trends (brief insight)
-4. risk_factors (array of potential risks)
-5. opportunity_score (0-100)
-6. ai_insights (investment recommendation)
-7. off_market_potential (likelihood this is or will become off-market)
-
-Focus on Hawaii real estate market conditions, tourism impact, and off-market opportunities.`;
-
-    const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama3-8b-8192',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a Hawaii real estate investment expert specializing in identifying off-market opportunities and distressed properties. Respond only with valid JSON.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.3,
-      max_tokens: 1000
-    }, {
-      headers: {
-        'Authorization': `Bearer ${groqApiKey}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    let analysis;
-    try {
-      analysis = JSON.parse(response.data.choices[0].message.content);
-    } catch (parseError) {
-      console.error('Error parsing GROQ response:', parseError);
-      return fallbackAnalysis(property);
-    }
-
-    return {
-      ...property,
-      ai_analysis: {
-        ...analysis,
-        analyzed_by: 'GROQ AI',
-        model: 'llama3-8b-8192'
-      },
-      analyzed_at: new Date().toISOString()
-    };
-
-  } catch (error) {
-    console.error('GROQ AI analysis error:', error);
-    return fallbackAnalysis(property);
   }
 }
 

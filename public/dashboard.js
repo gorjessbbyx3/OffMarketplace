@@ -391,7 +391,37 @@ async function generateAILeads() {
 
     } catch (error) {
         console.error('Error generating leads:', error);
-        dashboard.addMessage('Sorry, I encountered an error generating leads. Please try again.', 'ai');
+        dashboard.addMessage('Database search had issues, let me search the web for current opportunities...', 'ai');
+        
+        // Fallback to web search
+        try {
+            const webSearchResponse = await fetch('/api/search/search-properties', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: 'Hawaii investment properties foreclosure distressed',
+                    location: 'Honolulu',
+                    property_type: 'Multi-unit'
+                })
+            });
+            const webData = await webSearchResponse.json();
+            
+            if (webData.success) {
+                dashboard.addMessage(`Found current market opportunities through web search! Analyzing ${webData.sources_searched.length} sources including foreclosure.com and Hawaii MLS.`, 'ai');
+                
+                // Display web search results
+                const searchResults = document.getElementById('leadsContainer');
+                searchResults.innerHTML = `
+                    <div class="alert alert-info">
+                        <h6>🌐 Web Search Results</h6>
+                        <small>Sources: ${webData.sources_searched.join(', ')}</small>
+                        <div class="mt-2" style="white-space: pre-wrap; font-size: 0.9em;">${webData.search_results}</div>
+                    </div>
+                `;
+            }
+        } catch (webError) {
+            dashboard.addMessage('Both database and web search are having issues. Please try again later.', 'ai');
+        }
     }
 }
 

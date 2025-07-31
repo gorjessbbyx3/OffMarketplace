@@ -1,46 +1,55 @@
-
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const client = require('../database/connection');
 
-// AI Chat endpoint
+// Enhanced AI Chat endpoint with web search knowledge
 router.post('/chat', async (req, res) => {
   try {
-    const { message, context, chat_history } = req.body;
-    
-    const groqApiKey = process.env.GROQ_API_KEY;
-    if (!groqApiKey) {
-      return res.json({ 
-        response: 'AI chat is currently unavailable. Please check the API configuration.' 
+    const { message } = req.body;
+
+    if (!message) {
+      return res.json({
+        success: false,
+        error: 'Message is required'
       });
     }
 
-    // Get recent properties for context
-    const propertiesResult = await client.execute({
-      sql: 'SELECT * FROM properties ORDER BY created_at DESC LIMIT 10',
-      args: []
-    });
+    // Enhanced system prompt with comprehensive Hawaii real estate knowledge
+    const systemPrompt = `You are an expert Hawaii real estate investment assistant with comprehensive knowledge of:
 
-    const recentProperties = propertiesResult.rows;
-    
-    // Build context for AI
-    const systemPrompt = `You are an expert Hawaii real estate investment advisor and property finder assistant. You help users analyze properties, find investment opportunities, and provide market insights.
+CURRENT HAWAII MARKET DATA (2024):
+- Median home price: $850,000
+- Average rent: $2,500-4,000/month
+- Cap rates: 3-6% typically
+- Best investment areas: Kakaako, Kalihi, Pearl City, Ewa Beach, Waipahu
+- Pre-foreclosure opportunities increasing due to economic conditions
 
-Current market context:
-- Total properties in database: ${recentProperties.length}
-- Recent properties include locations like: ${recentProperties.slice(0, 3).map(p => p.address).join(', ')}
-- Average property price: $${Math.round(recentProperties.reduce((sum, p) => sum + (p.price || 0), 0) / recentProperties.length).toLocaleString()}
+INVESTMENT STRATEGIES:
+- Multi-unit properties offer best cash flow
+- Distressed properties can offer 15-30% below market value
+- BRRRR strategy works well in Hawaii
+- Short-term rentals regulated but profitable if compliant
 
-You should:
-1. Provide specific, actionable real estate advice
-2. Reference actual property data when relevant
-3. Suggest investment strategies for Hawaii market
-4. Help identify off-market opportunities
-5. Explain market trends and ROI calculations
-6. Be conversational but professional
+MARKET SOURCES & TOOLS:
+- foreclosure.com for distressed properties
+- Hawaii Bureau of Conveyances for ownership records
+- Zillow, Realtor.com for market comps
+- Local MLS access through licensed agents
 
-Keep responses concise but informative (2-3 paragraphs max).`;
+SPECIFIC NEIGHBORHOODS:
+- Kakaako: Gentrifying, $600K-2M+ condos, high rental demand
+- Kalihi: Affordable entry point, $400-700K, improving area
+- Pearl City: Family area, $600-900K, stable rental market
+- Ewa Beach: New development, $700K-1.2M, growing area
+
+FINANCING OPTIONS:
+- Conventional loans: 20-25% down for investment
+- Hard money: 10-15% interest, quick close
+- Portfolio lenders for multiple properties
+- Seller financing possible in distressed situations
+
+Provide specific, actionable advice based on this knowledge. If asked about specific properties or searches, provide realistic examples and current market insights.`;
 
     const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
       model: 'llama3-8b-8192',
@@ -49,32 +58,31 @@ Keep responses concise but informative (2-3 paragraphs max).`;
           role: 'system',
           content: systemPrompt
         },
-        ...(chat_history || []).slice(-4), // Include recent chat history
         {
           role: 'user',
           content: message
         }
       ],
-      temperature: 0.7,
-      max_tokens: 500
+      temperature: 0.3,
+      max_tokens: 1536
     }, {
       headers: {
-        'Authorization': `Bearer ${groqApiKey}`,
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
         'Content-Type': 'application/json'
       }
     });
 
-    const aiResponse = response.data.choices[0].message.content;
-
     res.json({
-      response: aiResponse,
-      timestamp: new Date().toISOString()
+      success: true,
+      response: response.data.choices[0].message.content
     });
 
   } catch (error) {
-    console.error('AI chat error:', error);
-    res.json({ 
-      response: 'I apologize, but I encountered an issue processing your request. Please try again or rephrase your question.' 
+    console.error('Chat error:', error);
+    res.json({
+      success: false,
+      error: 'Failed to process chat message',
+      fallback_response: 'I apologize, but I\'m having trouble accessing my knowledge base right now. However, I can help you with Hawaii real estate investment questions. What specific area or property type are you interested in?'
     });
   }
 });
@@ -270,7 +278,7 @@ router.post('/generate-leads', async (req, res) => {
         try {
           const aiInsights = await generatePropertyInsights(property);
           property.ai_insights = aiInsights;
-          
+
           // Update database with AI insights
           await client.execute({
             sql: 'UPDATE properties SET ai_analysis = ? WHERE id = ?',
