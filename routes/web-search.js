@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const GroqClient = require('../utils/groqClient');
@@ -7,9 +6,9 @@ const GroqClient = require('../utils/groqClient');
 router.post('/search-properties', async (req, res) => {
   try {
     const { query, location = 'Honolulu', property_type, price_range, status } = req.body;
-    
+
     const groqClient = new GroqClient();
-    
+
     const searchPrompt = `
 You are an AI with real-time web search access to Hawaii real estate data. Perform a comprehensive search based on:
 
@@ -91,7 +90,7 @@ Format results as if from actual web searches with current, actionable data.
 router.get('/market-insights', async (req, res) => {
   try {
     const groqClient = new GroqClient();
-    
+
     const marketPrompt = `
 Based on current web search of Hawaii real estate sources, provide comprehensive market insights:
 
@@ -151,29 +150,6 @@ Format as comprehensive market report with specific data points and actionable i
       success: false,
       error: 'Market insights temporarily unavailable'
     });
-  }
-});
-
-module.exports = router;
-const express = require('express');
-const router = express.Router();
-
-// Web search functionality
-router.post('/search', async (req, res) => {
-  try {
-    const { query, location } = req.body;
-    
-    // Placeholder for web search functionality
-    res.json({
-      success: true,
-      query,
-      location,
-      results: [],
-      message: 'Web search functionality to be implemented'
-    });
-  } catch (error) {
-    console.error('Web search error:', error);
-    res.status(500).json({ error: 'Web search failed' });
   }
 });
 
