@@ -359,22 +359,3 @@ router.get('/property-images/:id', async (req, res) => {
 });
 
 module.exports = router;
-const express = require('express');
-const router = express.Router();
-
-// Image scraping placeholder
-router.post('/images', async (req, res) => {
-  try {
-    // Placeholder for image scraping functionality
-    res.json({
-      success: true,
-      message: 'Image scraping functionality to be implemented',
-      images: []
-    });
-  } catch (error) {
-    console.error('Image scraper error:', error);
-    res.status(500).json({ error: 'Image scraping failed' });
-  }
-});
-
-module.exports = router;
