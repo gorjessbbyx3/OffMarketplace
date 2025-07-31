@@ -370,21 +370,213 @@ class HawaiiPropertyScraper {
     }
   }
 
+  // AI-powered scraping of Hawaiian Real Estate foreclosures
+  async scrapeHawaiianRealEstateForeclosures() {
+    console.log('AI-powered scraping of Hawaiian Real Estate foreclosures...');
+    const browser = await this.initBrowser();
+    const page = await browser.newPage();
+    
+    try {
+      await page.goto('https://www.hawaiianrealestate.com/foreclosures/hawaii', {
+        waitUntil: 'networkidle2',
+        timeout: 30000
+      });
+
+      // Wait for dynamic content
+      await page.waitForTimeout(3000);
+
+      const properties = await page.evaluate(() => {
+        const results = [];
+        
+        // Search for foreclosure property listings
+        const selectors = [
+          '.foreclosure-listing', '.property-item', '.listing-card',
+          '.search-result', '[class*="property"]', '[class*="listing"]',
+          '.property-card', '.foreclosure-property', 'article'
+        ];
+        
+        let allElements = [];
+        selectors.forEach(selector => {
+          const elements = document.querySelectorAll(selector);
+          allElements = [...allElements, ...Array.from(elements)];
+        });
+        
+        allElements.forEach((element, index) => {
+          if (index >= 40) return;
+          
+          const text = element.textContent || '';
+          
+          // Extract foreclosure-specific information
+          const addressMatch = text.match(/\d+[^,\n]*(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Way|Place|Pl|Circle|Cir|Court|Ct)[^,\n]*(?:,\s*(?:HI|Hawaii))?/i);
+          const priceMatch = text.match(/\$[\d,]+/);
+          const bedBathMatch = text.match(/(\d+)\s*(?:bed|br).*?(\d+)\s*(?:bath|ba)/i);
+          const sqftMatch = text.match(/(\d{1,4}[,]?\d{0,3})\s*(?:sq\.?\s*ft\.?|sqft)/i);
+          
+          if (addressMatch && priceMatch) {
+            const address = addressMatch[0].trim();
+            const price = parseInt(priceMatch[0].replace(/[$,]/g, ''));
+            const beds = bedBathMatch ? parseInt(bedBathMatch[1]) : null;
+            const baths = bedBathMatch ? parseInt(bedBathMatch[2]) : null;
+            const sqft = sqftMatch ? parseInt(sqftMatch[1].replace(',', '')) : null;
+            
+            if (price > 50000 && address.length > 15) {
+              results.push({
+                address: address,
+                price: price,
+                property_type: text.toLowerCase().includes('condo') ? 'Condo' : 'Single-family',
+                bedrooms: beds,
+                bathrooms: baths,
+                sqft: sqft,
+                distress_status: 'Foreclosure',
+                source: 'Hawaiian Real Estate',
+                details: text.substring(0, 250),
+                scraped_at: new Date().toISOString()
+              });
+            }
+          }
+        });
+        
+        return results;
+      });
+
+      console.log(`AI found ${properties.length} Hawaiian Real Estate foreclosure properties`);
+      return properties;
+
+    } catch (error) {
+      console.error('Error in AI scraping Hawaiian Real Estate:', error);
+      return [];
+    } finally {
+      await page.close();
+    }
+  }
+
+  // AI-powered scraping of Zillow Hawaii foreclosures
+  async scrapeZillowHawaiiForeclosures() {
+    console.log('AI-powered scraping of Zillow Hawaii foreclosures...');
+    const browser = await this.initBrowser();
+    const page = await browser.newPage();
+    
+    try {
+      await page.goto('https://www.zillow.com/hi/foreclosures', {
+        waitUntil: 'networkidle2',
+        timeout: 30000
+      });
+
+      // Wait for Zillow's dynamic content to load
+      await page.waitForTimeout(5000);
+
+      const properties = await page.evaluate(() => {
+        const results = [];
+        
+        // Zillow-specific selectors for property listings
+        const selectors = [
+          '[data-test="property-card"]', '.ListItem-c11n-8-84-3',
+          '.property-card', '.search-result', '[class*="PropertyCard"]',
+          '[class*="ListItem"]', 'article', '.result-item'
+        ];
+        
+        let allElements = [];
+        selectors.forEach(selector => {
+          const elements = document.querySelectorAll(selector);
+          allElements = [...allElements, ...Array.from(elements)];
+        });
+        
+        allElements.forEach((element, index) => {
+          if (index >= 30) return;
+          
+          const text = element.textContent || '';
+          
+          // Zillow-specific data extraction
+          const addressElement = element.querySelector('[data-test="property-card-addr"]') || 
+                                 element.querySelector('.list-card-addr') ||
+                                 element.querySelector('address');
+          
+          const priceElement = element.querySelector('[data-test="property-card-price"]') ||
+                              element.querySelector('.list-card-price') ||
+                              element.querySelector('.property-price');
+          
+          const bedsElement = element.querySelector('[data-test="property-card-details"]') ||
+                             element.querySelector('.list-card-details');
+          
+          const address = addressElement ? addressElement.textContent.trim() : null;
+          const priceText = priceElement ? priceElement.textContent.trim() : null;
+          const details = bedsElement ? bedsElement.textContent.trim() : '';
+          
+          // Parse price
+          let price = null;
+          if (priceText) {
+            const priceMatch = priceText.match(/\$[\d,]+/);
+            if (priceMatch) {
+              price = parseInt(priceMatch[0].replace(/[$,]/g, ''));
+            }
+          }
+          
+          // Extract beds/baths
+          const bedBathMatch = details.match(/(\d+)\s*bds?\s*[,•]\s*(\d+)\s*ba/i);
+          const sqftMatch = details.match(/(\d{1,4}[,]?\d{0,3})\s*sqft/i);
+          
+          if (address && price && price > 100000) {
+            results.push({
+              address: address,
+              price: price,
+              property_type: address.toLowerCase().includes('unit') || 
+                            address.toLowerCase().includes('#') ? 'Condo' : 'Single-family',
+              bedrooms: bedBathMatch ? parseInt(bedBathMatch[1]) : null,
+              bathrooms: bedBathMatch ? parseInt(bedBathMatch[2]) : null,
+              sqft: sqftMatch ? parseInt(sqftMatch[1].replace(',', '')) : null,
+              distress_status: 'Foreclosure',
+              source: 'Zillow Foreclosures',
+              details: text.substring(0, 200),
+              scraped_at: new Date().toISOString()
+            });
+          }
+        });
+        
+        return results;
+      });
+
+      console.log(`AI found ${properties.length} Zillow foreclosure properties`);
+      return properties;
+
+    } catch (error) {
+      console.error('Error in AI scraping Zillow foreclosures:', error);
+      return [];
+    } finally {
+      await page.close();
+    }
+  }
+
   // Enhanced main scraping function with AI
   async scrapeAllSourcesWithAI() {
     console.log('Starting AI-powered Hawaii property scraping...');
     
     try {
       // Run all scrapers in parallel for efficiency
-      const [oahuProperties, foreclosureProperties, legalNoticeProperties, countyProperties] = await Promise.all([
+      const [
+        oahuProperties, 
+        foreclosureProperties, 
+        legalNoticeProperties, 
+        countyProperties,
+        hawaiianRealEstateProperties,
+        zillowProperties
+      ] = await Promise.all([
         this.scrapeOahuREWithAI(),
         this.scrapeForeclosureComWithAI(),
         this.scrapeHawaiiLegalNotices(),
-        this.scrapeHonoluluCountyRecords()
+        this.scrapeHonoluluCountyRecords(),
+        this.scrapeHawaiianRealEstateForeclosures(),
+        this.scrapeZillowHawaiiForeclosures()
       ]);
 
       // Combine all results
-      const allProperties = [...oahuProperties, ...foreclosureProperties, ...legalNoticeProperties, ...countyProperties];
+      const allProperties = [
+        ...oahuProperties, 
+        ...foreclosureProperties, 
+        ...legalNoticeProperties, 
+        ...countyProperties,
+        ...hawaiianRealEstateProperties,
+        ...zillowProperties
+      ];
 
       // AI-powered property enhancement with GROQ
       const enhancedProperties = await Promise.all(allProperties.map(async (property) => {
