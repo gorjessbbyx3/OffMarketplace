@@ -3,6 +3,8 @@ const router = express.Router();
 const client = require('../database/connection');
 const HawaiiPropertyScraper = require('../scrapers/hawaiiPropertyScraper');
 const axios = require('axios');
+const puppeteer = require('puppeteer');
+const cheerio = require('cheerio');
 
 // Trigger scraping of Hawaii properties
 router.post('/scrape-hawaii', async (req, res) => {
@@ -140,101 +142,6 @@ router.get('/generate-leads', async (req, res) => {
   }
 });
 
-module.exports = router;
-
-// Scrape properties from multiple sources
-router.post('/scrape-hawaii', async (req, res) => {
-  try {
-    console.log('Starting Hawaii property scraping...');
-    let scrapedProperties = [];
-
-    // Scrape Foreclosure.com
-    const foreclosureProperties = await scrapeForeclosureDotCom();
-    scrapedProperties = [...scrapedProperties, ...foreclosureProperties];
-
-    // Scrape OahuRE.com
-    const oahuProperties = await scrapeOahuRE();
-    scrapedProperties = [...scrapedProperties, ...oahuProperties];
-
-    // AI Analysis for each property
-    const analyzedProperties = await Promise.all(
-      scrapedProperties.map(property => analyzePropertyWithAI(property))
-    );
-
-    // Save to database
-    let savedCount = 0;
-    for (const property of analyzedProperties) {
-      try {
-        await savePropertyToDatabase(property);
-        savedCount++;
-      } catch (error) {
-        console.error('Error saving property:', error);
-      }
-    }
-
-    res.json({
-      success: true,
-      message: `Scraped and analyzed ${scrapedProperties.length} properties, saved ${savedCount}`,
-      properties: analyzedProperties
-    });
-
-  } catch (error) {
-    console.error('Scraping error:', error);
-    res.status(500).json({ error: 'Failed to scrape properties' });
-  }
-});
-
-// Scrape Foreclosure.com for distressed properties
-async function scrapeForeclosureDotCom() {
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
-  const properties = [];
-
-  try {
-    // Navigate to Foreclosure.com Hawaii listings
-    await page.goto('https://www.foreclosure.com/listing/search.html?state=HI', {
-      waitUntil: 'networkidle0'
-    });
-
-    // Wait for listings to load
-    await page.waitForSelector('.property-item', { timeout: 10000 });
-
-    const listings = await page.evaluate(() => {
-      const items = document.querySelectorAll('.property-item');
-      return Array.from(items).slice(0, 20).map(item => {
-        const address = item.querySelector('.address')?.textContent?.trim() || '';
-        const price = item.querySelector('.price')?.textContent?.trim() || '';
-        const details = item.querySelector('.details')?.textContent?.trim() || '';
-        const link = item.querySelector('a')?.href || '';
-
-        return { address, price, details, link, source: 'Foreclosure.com' };
-      });
-    });
-
-    for (const listing of listings) {
-      if (listing.address.includes('HI') && listing.price) {
-        properties.push({
-          address: listing.address,
-          price: parsePrice(listing.price),
-          property_type: inferPropertyType(listing.details),
-          distress_status: 'Foreclosure',
-          source: 'Foreclosure.com',
-          raw_data: listing
-        });
-      }
-    }
-
-  } catch (error) {
-    console.error('Error scraping Foreclosure.com:', error);
-  } finally {
-    await browser.close();
-  }
-
-  return properties;
-}
-
-
-
 // Detect off-market potential properties using AI
 router.post('/detect-off-market', async (req, res) => {
   try {
@@ -337,47 +244,6 @@ Respond with JSON: {"off_market_score": number, "reasoning": "explanation", "act
   }
 }
 
-
-// Scrape OahuRE.com for local listings
-async function scrapeOahuRE() {
-  const properties = [];
-
-  try {
-    const response = await axios.get('https://www.oahure.com/listings', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
-
-    const $ = cheerio.load(response.data);
-
-    $('.property-listing').each((index, element) => {
-      if (index < 20) { // Limit to 20 properties
-        const address = $(element).find('.property-address').text().trim();
-        const price = $(element).find('.property-price').text().trim();
-        const type = $(element).find('.property-type').text().trim();
-        const description = $(element).find('.property-description').text().trim();
-
-        if (address && price) {
-          properties.push({
-            address,
-            price: parsePrice(price),
-            property_type: type || inferPropertyType(description),
-            distress_status: inferDistressStatus(description),
-            source: 'OahuRE.com',
-            raw_data: { address, price, type, description }
-          });
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error('Error scraping OahuRE.com:', error);
-  }
-
-  return properties;
-}
-
 // AI Analysis function using GROQ
 async function analyzePropertyWithAI(property) {
   try {
@@ -454,24 +320,9 @@ Focus on Hawaii real estate market conditions, tourism impact, and off-market op
 
 // Fallback analysis when AI is unavailable
 function fallbackAnalysis(property) {
-  return {
-    ...property,
-    ai_analysis: {
-      investment_score: Math.floor(Math.random() * 100),
-      estimated_roi: '8-12%',
-      market_trends: 'Stable Hawaii market',
-      risk_factors: ['Market volatility', 'Tourism dependency'],
-      opportunity_score: Math.floor(Math.random() * 100),
-      ai_insights: 'AI analysis temporarily unavailable - using fallback assessment',
-      off_market_potential: 'Medium',
-      analyzed_by: 'Fallback System',
-      model: 'fallback'
-    },
-    analyzed_at: new Date().toISOString()
-  };
-}
-
-
+  const analysis = {
+    investment_score: Math.floor(Math.random() * 100),
+    estimated_roi: '8-12%',
     market_trends: generateMarketAnalysis(property),
     risk_factors: identifyRiskFactors(property),
     opportunity_score: calculateOpportunityScore(property),
@@ -608,27 +459,6 @@ async function savePropertyToDatabase(property) {
     });
   }
 }
-
-// Get scraping statistics
-router.get('/stats', async (req, res) => {
-  try {
-    const stats = await client.execute(`
-      SELECT 
-        source,
-        COUNT(*) as count,
-        AVG(CASE WHEN ai_analysis IS NOT NULL THEN 1 ELSE 0 END) as analysis_rate,
-        MAX(analyzed_at) as last_analysis
-      FROM properties 
-      WHERE source IN ('Foreclosure.com', 'OahuRE.com')
-      GROUP BY source
-    `);
-
-    res.json(stats.rows);
-  } catch (error) {
-    console.error('Error fetching stats:', error);
-    res.status(500).json({ error: 'Failed to fetch stats' });
-  }
-});
 
 // Generate AI report for specific property
 router.post('/generate-report/:id', async (req, res) => {
