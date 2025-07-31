@@ -3,9 +3,6 @@ const express = require('express');
 const router = express.Router();
 const Groq = require('groq-sdk');
 const GroqClient = require('../utils/groqClient');
-const express = require('express');
-const router = express.Router();
-const { Groq } = require('groq-sdk');
 const client = require('../database/connection');
 
 // Test GROQ API endpoint
@@ -124,9 +121,6 @@ router.post('/hello', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   }
-});
-
-module.exports = router;
 });
 
 module.exports = router;
