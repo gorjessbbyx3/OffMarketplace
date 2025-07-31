@@ -546,6 +546,178 @@ class HawaiiPropertyScraper {
     }
   }
 
+  // AI-powered scraping of Hawaii eCourt system for foreclosure cases
+  async scrapeHawaiiECourt() {
+    console.log('AI-powered scraping of Hawaii eCourt foreclosure cases...');
+    const browser = await this.initBrowser();
+    const page = await browser.newPage();
+    
+    try {
+      await page.goto('https://jimspss1.courts.state.hi.us/eCourt/ECC/', {
+        waitUntil: 'networkidle2',
+        timeout: 45000
+      });
+
+      // Wait for page to load
+      await page.waitForTimeout(5000);
+
+      // Navigate to foreclosure case search
+      const properties = await page.evaluate(() => {
+        const results = [];
+        
+        // Look for foreclosure case data
+        const caseSelectors = [
+          '.case-row', '.foreclosure-case', 'tr', 'tbody tr',
+          '[class*="case"]', '[class*="foreclosure"]', '.search-result'
+        ];
+        
+        let allElements = [];
+        caseSelectors.forEach(selector => {
+          const elements = document.querySelectorAll(selector);
+          allElements = [...allElements, ...Array.from(elements)];
+        });
+        
+        allElements.forEach((element, index) => {
+          if (index >= 50) return;
+          
+          const text = element.textContent || '';
+          const lowerText = text.toLowerCase();
+          
+          // Look for foreclosure-related cases
+          if (lowerText.includes('foreclosure') || 
+              lowerText.includes('mortgage') || 
+              lowerText.includes('trustee') ||
+              lowerText.includes('power of sale') ||
+              lowerText.includes('judicial sale')) {
+            
+            // Extract case information
+            const caseNumberMatch = text.match(/\d{2}-\d{1}-\d{4}/);
+            const addressMatch = text.match(/\d+[^,\n]*(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Way|Place|Pl|Circle|Cir|Court|Ct)[^,\n]*(?:,\s*(?:Honolulu|Hawaii|HI))?/i);
+            const dateMatch = text.match(/\d{1,2}\/\d{1,2}\/\d{4}/);
+            const debtMatch = text.match(/\$[\d,]+(?:\.\d{2})?/g);
+            
+            if (addressMatch || caseNumberMatch) {
+              const address = addressMatch ? addressMatch[0].trim() : 'Address in court records';
+              const caseNumber = caseNumberMatch ? caseNumberMatch[0] : null;
+              const courtDate = dateMatch ? dateMatch[0] : null;
+              const debtAmount = debtMatch ? Math.max(...debtMatch.map(d => parseInt(d.replace(/[$,]/g, '')))) : null;
+              
+              results.push({
+                address: address,
+                price: debtAmount,
+                property_type: 'Foreclosure Case',
+                distress_status: 'Court Foreclosure',
+                source: 'Hawaii eCourt System',
+                case_number: caseNumber,
+                court_date: courtDate,
+                details: text.substring(0, 300),
+                scraped_at: new Date().toISOString()
+              });
+            }
+          }
+        });
+        
+        return results;
+      });
+
+      console.log(`AI found ${properties.length} eCourt foreclosure cases`);
+      return properties;
+
+    } catch (error) {
+      console.error('Error in AI scraping eCourt:', error);
+      return [];
+    } finally {
+      await page.close();
+    }
+  }
+
+  // AI-powered scraping of Hawaii MFDR notices for tax delinquency
+  async scrapeHawaiiMFDRNotices() {
+    console.log('AI-powered scraping of Hawaii MFDR tax delinquency notices...');
+    const browser = await this.initBrowser();
+    const page = await browser.newPage();
+    
+    try {
+      await page.goto('https://mfdr.ehawaii.gov/notices/index.html', {
+        waitUntil: 'networkidle2',
+        timeout: 30000
+      });
+
+      // Wait for dynamic content to load
+      await page.waitForTimeout(3000);
+
+      const properties = await page.evaluate(() => {
+        const results = [];
+        
+        // Look for tax delinquency notices
+        const noticeSelectors = [
+          '.notice', '.tax-notice', '.delinquent-notice', 'tr', 'tbody tr',
+          '[class*="notice"]', '[class*="tax"]', '[class*="delinquent"]',
+          '.property-notice', 'article', 'section'
+        ];
+        
+        let allElements = [];
+        noticeSelectors.forEach(selector => {
+          const elements = document.querySelectorAll(selector);
+          allElements = [...allElements, ...Array.from(elements)];
+        });
+        
+        allElements.forEach((element, index) => {
+          if (index >= 100) return;
+          
+          const text = element.textContent || '';
+          const lowerText = text.toLowerCase();
+          
+          // Look for tax delinquency indicators
+          if (lowerText.includes('delinquent') || 
+              lowerText.includes('tax sale') || 
+              lowerText.includes('tax lien') ||
+              lowerText.includes('property tax') ||
+              lowerText.includes('unpaid tax') ||
+              lowerText.includes('tax certificate')) {
+            
+            // Extract property information
+            const addressMatch = text.match(/\d+[^,\n]*(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Way|Place|Pl|Circle|Cir|Court|Ct)[^,\n]*(?:,\s*(?:Honolulu|Hawaii|HI))?/i);
+            const tmkMatch = text.match(/TMK:\s*(\d-\d-\d{3}-\d{3})/i) || text.match(/\d-\d-\d{3}-\d{3}/);
+            const taxAmountMatch = text.match(/\$[\d,]+(?:\.\d{2})?/g);
+            const dateMatch = text.match(/(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}/gi);
+            
+            if (addressMatch || tmkMatch) {
+              const address = addressMatch ? addressMatch[0].trim() : `TMK: ${tmkMatch[1]}`;
+              const tmk = tmkMatch ? tmkMatch[1] || tmkMatch[0] : null;
+              const taxAmount = taxAmountMatch ? Math.max(...taxAmountMatch.map(t => parseInt(t.replace(/[$,]/g, '')))) : null;
+              const saleDate = dateMatch ? dateMatch[0] : null;
+              
+              results.push({
+                address: address,
+                price: taxAmount,
+                property_type: 'Tax Delinquent Property',
+                distress_status: 'Tax Delinquent',
+                source: 'Hawaii MFDR Tax Notices',
+                tmk: tmk,
+                tax_sale_date: saleDate,
+                delinquent_amount: taxAmount,
+                details: text.substring(0, 300),
+                scraped_at: new Date().toISOString()
+              });
+            }
+          }
+        });
+        
+        return results;
+      });
+
+      console.log(`AI found ${properties.length} MFDR tax delinquency notices`);
+      return properties;
+
+    } catch (error) {
+      console.error('Error in AI scraping MFDR notices:', error);
+      return [];
+    } finally {
+      await page.close();
+    }
+  }
+
   // Enhanced main scraping function with AI
   async scrapeAllSourcesWithAI() {
     console.log('Starting AI-powered Hawaii property scraping...');
@@ -558,14 +730,18 @@ class HawaiiPropertyScraper {
         legalNoticeProperties, 
         countyProperties,
         hawaiianRealEstateProperties,
-        zillowProperties
+        zillowProperties,
+        eCourtProperties,
+        mfdrProperties
       ] = await Promise.all([
         this.scrapeOahuREWithAI(),
         this.scrapeForeclosureComWithAI(),
         this.scrapeHawaiiLegalNotices(),
         this.scrapeHonoluluCountyRecords(),
         this.scrapeHawaiianRealEstateForeclosures(),
-        this.scrapeZillowHawaiiForeclosures()
+        this.scrapeZillowHawaiiForeclosures(),
+        this.scrapeHawaiiECourt(),
+        this.scrapeHawaiiMFDRNotices()
       ]);
 
       // Combine all results
@@ -575,7 +751,9 @@ class HawaiiPropertyScraper {
         ...legalNoticeProperties, 
         ...countyProperties,
         ...hawaiianRealEstateProperties,
-        ...zillowProperties
+        ...zillowProperties,
+        ...eCourtProperties,
+        ...mfdrProperties
       ];
 
       // AI-powered property enhancement with GROQ

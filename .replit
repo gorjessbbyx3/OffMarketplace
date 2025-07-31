@@ -11,7 +11,6 @@ deploymentTarget = "gce"
 run = ["sh", "-c", "npm run dev"]
 
 [workflows]
-runButton = "Run"
 
 [[workflows.workflow]]
 name = "Start Server"
@@ -88,3 +87,7 @@ args = "node server.js"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 50001
+externalPort = 3000
