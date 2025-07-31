@@ -232,8 +232,16 @@ function enhanceWithRuleBasedScoring(property, analysis) {
   const taxDelinquencySignals = [];
   const preForeclosureSignals = [];
 
-  // HIGH PRIORITY: Active foreclosure proceedings
-  if (property.distress_status === 'Foreclosure') {
+  // HIGH PRIORITY: Court foreclosure and tax delinquency
+  if (property.distress_status === 'Court Foreclosure') {
+    bonusScore += 45;
+    preForeclosureSignals.push('Court foreclosure case - legal proceeding active');
+    additionalIndicators.push('🏛️ COURT FORECLOSURE - Highest Priority Legal Case');
+  } else if (property.distress_status === 'Tax Delinquent') {
+    bonusScore += 40;
+    taxDelinquencySignals.push('Tax delinquent - potential tax sale opportunity');
+    additionalIndicators.push('💰 TAX DELINQUENT - Tax Sale Opportunity');
+  } else if (property.distress_status === 'Foreclosure') {
     bonusScore += 35;
     preForeclosureSignals.push('Active foreclosure - immediate opportunity');
     additionalIndicators.push('🚨 FORECLOSURE ACTIVE - High Priority Lead');
@@ -261,8 +269,16 @@ function enhanceWithRuleBasedScoring(property, analysis) {
     additionalIndicators.push('📰 LEGAL NOTICE SOURCE - Tax Sale Potential');
   }
 
-  // County records often contain tax information
-  if (propertySource.includes('county') || propertySource.includes('honolulu')) {
+  // Government sources are highest priority for tax and foreclosure data
+  if (propertySource.includes('ecourt') || propertySource.includes('court')) {
+    bonusScore += 30;
+    preForeclosureSignals.push('Court system record - active legal proceedings');
+    additionalIndicators.push('⚖️ COURT RECORD - Active Legal Case');
+  } else if (propertySource.includes('mfdr') || propertySource.includes('tax notice')) {
+    bonusScore += 35;
+    taxDelinquencySignals.push('Official tax notice - confirmed delinquency');
+    additionalIndicators.push('🏛️ OFFICIAL TAX NOTICE - Confirmed Delinquent');
+  } else if (propertySource.includes('county') || propertySource.includes('honolulu')) {
     bonusScore += 15;
     taxDelinquencySignals.push('County record source - tax payment history available');
     additionalIndicators.push('🏛️ COUNTY RECORD - Verify Tax Status');
