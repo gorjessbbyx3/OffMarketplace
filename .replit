@@ -1,15 +1,14 @@
-entrypoint = "server.js"
-modules = ["nodejs-20"]
-run = "node server.js"
+modules = ["nodejs-20", "web", "nix"]
+run = "npm run dev"
 
 hidden = [".pythonlibs"]
 
 [nix]
-channel = "stable-23_05"
+channel = "stable-25_05"
 
 [deployment]
 deploymentTarget = "gce"
-run = "node server.js"
+run = ["sh", "-c", "npm run dev"]
 
 [workflows]
 runButton = "Start Server"
