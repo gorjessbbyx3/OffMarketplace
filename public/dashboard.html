@@ -1,0 +1,289 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Property Dashboard - Honolulu Off-Market Property Finder</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-bg: #ecf0f1;
+            --dark-bg: #34495e;
+        }
+
+        body {
+            background-color: var(--light-bg);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .chat-container {
+            height: 500px;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: var(--secondary-color);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px 10px 0 0;
+            font-weight: bold;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+
+        .message.user {
+            background: var(--secondary-color);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .message.ai {
+            background: white;
+            border: 1px solid #dee2e6;
+            margin-right: auto;
+        }
+
+        .chat-input {
+            border-top: 1px solid #dee2e6;
+            padding: 1rem;
+            background: white;
+            border-radius: 0 0 10px 10px;
+        }
+
+        .leads-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .lead-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: white;
+            transition: transform 0.2s;
+        }
+
+        .lead-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .lead-priority {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 15px;
+            font-weight: bold;
+        }
+
+        .priority-high {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .priority-medium {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .priority-low {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 0.5rem;
+            font-style: italic;
+            color: #666;
+        }
+
+        .ai-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: var(--success-color);
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .quick-actions {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-robot"></i> AI Property Dashboard</h1>
+                    <p class="mb-0">Intelligent off-market property discovery for Honolulu real estate</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="ai-status"></div>
+                    <span>AI Assistant Online</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Left Column - Chat and Quick Actions -->
+            <div class="col-lg-4">
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" onclick="generateAILeads()">
+                            <i class="fas fa-magic"></i> Generate AI Leads
+                        </button>
+                        <button class="btn btn-success" onclick="findKakaakoOpportunity()">
+                            <i class="fas fa-search"></i> Find Kakaako 4-Unit
+                        </button>
+                        <button class="btn btn-info" onclick="getMarketAnalysis()">
+                            <i class="fas fa-chart-line"></i> Market Analysis
+                        </button>
+                        <button class="btn btn-warning" onclick="scrapeProperties()">
+                            <i class="fas fa-download"></i> Scrape New Properties
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AI Chat -->
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <i class="fas fa-robot"></i> AI Property Assistant
+                    </div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message ai">
+                            <strong>AI Assistant:</strong> Hello! I'm your AI property assistant. I can help you find off-market opportunities, analyze properties, and generate leads. What would you like to know about the Honolulu real estate market?
+                        </div>
+                    </div>
+                    <div class="typing-indicator" id="typingIndicator">
+                        AI is typing...
+                    </div>
+                    <div class="chat-input">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="chatInput" placeholder="Ask about properties, market trends, or investment opportunities...">
+                            <button class="btn btn-primary" onclick="sendMessage()">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Stats and Leads -->
+            <div class="col-lg-8">
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="stats-number" id="totalProperties">0</div>
+                            <div class="text-muted">Total Properties</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="stats-number" id="aiLeads">0</div>
+                            <div class="text-muted">AI Generated Leads</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="stats-number" id="highPriorityLeads">0</div>
+                            <div class="text-muted">High Priority</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="stats-number" id="avgROI">0%</div>
+                            <div class="text-muted">Avg ROI</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Generated Leads -->
+                <div class="leads-container">
+                    <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+                        <h5><i class="fas fa-magic"></i> AI Generated Leads</h5>
+                        <button class="btn btn-sm btn-outline-primary" onclick="refreshLeads()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="p-3">
+                        <div id="leadsContainer">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-robot fa-3x mb-3"></i>
+                                <p>Click "Generate AI Leads" to discover new opportunities</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>

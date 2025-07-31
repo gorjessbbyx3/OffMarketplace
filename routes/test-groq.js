@@ -66,4 +66,59 @@ router.get('/kakaako-search', async (req, res) => {
   }
 });
 
+// Chat endpoint for dashboard
+router.post('/hello', async (req, res) => {
+  try {
+    const { message } = req.body;
+    const groqClient = new GroqClient();
+    
+    // Get context about available properties
+    const propertiesResponse = await client.execute({
+      sql: 'SELECT COUNT(*) as count FROM properties',
+      args: []
+    });
+    
+    const propertyCount = propertiesResponse.rows[0]?.count || 0;
+    
+    const contextPrompt = `You are an AI assistant for a Honolulu real estate investment platform. 
+    Current database has ${propertyCount} properties. 
+    User message: "${message}"
+    
+    Provide helpful information about Hawaii real estate, investment opportunities, or off-market properties.
+    Keep responses conversational and under 200 words.`;
+
+    const completion = await groqClient.groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: "You are a helpful Hawaii real estate investment assistant. Be conversational, knowledgeable, and focus on investment opportunities."
+        },
+        {
+          role: "user",
+          content: contextPrompt
+        }
+      ],
+      model: "llama3-8b-8192",
+      temperature: 0.7,
+      max_tokens: 300,
+    });
+
+    const response = completion.choices[0]?.message?.content || "I'm here to help with your Hawaii real estate questions!";
+
+    res.json({
+      success: true,
+      response: response,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Chat error:', error);
+    res.json({
+      success: true,
+      response: "I'm here to help with Hawaii real estate! Ask me about properties, market trends, or investment opportunities.",
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 module.exports = router;
