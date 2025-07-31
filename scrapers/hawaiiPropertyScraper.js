@@ -395,6 +395,12 @@ class HawaiiPropertyScraper {
         // AI-powered property analysis with GROQ
         const aiAnalysis = await this.performAIAnalysis(property);
 
+        // Enhanced property data with tenant revenue and condition analysis
+        const estimatedMonthlyRent = this.calculateEstimatedRent(property.price, property.property_type, zip);
+        const tenureType = this.determineTenure(property.details, property.source);
+        const conditionAssessment = this.assessPropertyCondition(property.details, property.distress_status);
+        const sourceReliability = this.assessSourceReliability(property.source);
+
         return {
           address: property.address,
           zip: zip,
@@ -405,10 +411,31 @@ class HawaiiPropertyScraper {
           price: property.price,
           zoning: this.guessZoning(property.property_type),
           distress_status: property.distress_status,
-          tenure: 'Fee Simple',
+          
+          // Enhanced tenant revenue information
+          estimated_monthly_rent: estimatedMonthlyRent,
+          annual_rental_income: estimatedMonthlyRent * 12,
+          rental_strategy: this.recommendRentalStrategy(zip, property.property_type),
+          
+          // Enhanced lease information
+          tenure: tenureType.type,
+          lease_expiration: tenureType.expiration,
+          ground_rent: tenureType.ground_rent,
+          
+          // Property condition assessment
+          property_condition: conditionAssessment.condition,
+          investment_strategy: conditionAssessment.strategy,
+          renovation_estimate: conditionAssessment.renovation_cost,
+          furnished_status: conditionAssessment.furnished,
+          
+          // Source reliability
+          source_credibility: sourceReliability.credibility,
+          data_freshness: sourceReliability.freshness,
+          verification_needed: sourceReliability.verification_items,
+          
           distance_from_hnl: Math.random() * 15 + 2,
-          str_revenue: Math.floor(property.price * 0.08),
-          str_roi: Math.random() * 5 + 4,
+          str_revenue: estimatedMonthlyRent * 12,
+          str_roi: (estimatedMonthlyRent * 12 / property.price) * 100,
           owner_name: 'AI Scraped Lead',
           owner_contact: 'Contact via listing source',
           photos: [],
@@ -607,6 +634,168 @@ class HawaiiPropertyScraper {
       'Land': 'AG-1'
     };
     return zonemap[propertyType] || 'R-5';
+  }
+
+  // Calculate estimated monthly rent based on property characteristics
+  calculateEstimatedRent(price, propertyType, zip) {
+    const baseRentRates = {
+      '96813': 3500, // Kakaako/Honolulu
+      '96814': 3200, // Ala Moana
+      '96815': 4000, // Waikiki
+      '96816': 2800, // Kaimuki
+      '96817': 2600, // Salt Lake
+      '96818': 2400, // Aiea
+      '96819': 2200, // Pearl Harbor
+      '96734': 2000, // Kailua
+      '96744': 1800, // Kaneohe
+      '96782': 1600  // Pearl City
+    };
+
+    const baseRate = baseRentRates[zip] || 2500;
+    
+    // Adjust for property type
+    const typeMultiplier = {
+      'Condo': 1.0,
+      'Single-family': 1.2,
+      'Multi-family': 0.8,
+      'Townhouse': 1.1
+    };
+
+    const multiplier = typeMultiplier[propertyType] || 1.0;
+    const estimatedRent = Math.floor(baseRate * multiplier);
+
+    // Cap at reasonable ranges
+    return Math.min(Math.max(estimatedRent, 1500), 6000);
+  }
+
+  // Determine tenure type (Fee Simple vs Leasehold)
+  determineTenure(details, source) {
+    const lowerDetails = (details || '').toLowerCase();
+    const lowerSource = (source || '').toLowerCase();
+
+    if (lowerDetails.includes('leasehold') || lowerDetails.includes('lease hold')) {
+      return {
+        type: 'Leasehold',
+        expiration: this.extractLeaseExpiration(details),
+        ground_rent: this.extractGroundRent(details)
+      };
+    }
+    
+    if (lowerDetails.includes('fee simple') || lowerSource.includes('county')) {
+      return {
+        type: 'Fee Simple',
+        expiration: null,
+        ground_rent: null
+      };
+    }
+
+    return {
+      type: 'Unknown - Verify',
+      expiration: null,
+      ground_rent: null
+    };
+  }
+
+  // Extract lease expiration from property details
+  extractLeaseExpiration(details) {
+    if (!details) return null;
+    
+    const yearMatch = details.match(/(?:expires?|expiration).*?(\d{4})/i);
+    if (yearMatch) {
+      return `${yearMatch[1]}-12-31`; // Assume end of year
+    }
+    
+    return null;
+  }
+
+  // Extract ground rent from property details
+  extractGroundRent(details) {
+    if (!details) return null;
+    
+    const rentMatch = details.match(/ground rent.*?\$(\d+(?:,\d{3})*)/i);
+    if (rentMatch) {
+      return parseInt(rentMatch[1].replace(',', ''));
+    }
+    
+    return null;
+  }
+
+  // Assess property condition based on details and distress status
+  assessPropertyCondition(details, distressStatus) {
+    const lowerDetails = (details || '').toLowerCase();
+    
+    let condition = 'Unknown';
+    let strategy = 'Evaluate';
+    let renovationCost = 'TBD';
+    let furnished = 'Unknown';
+
+    // Condition assessment
+    if (lowerDetails.includes('move-in ready') || lowerDetails.includes('turnkey')) {
+      condition = 'Move-in Ready';
+      strategy = 'Hold & Rent';
+      renovationCost = '$0-5,000';
+    } else if (lowerDetails.includes('fixer') || lowerDetails.includes('needs work') || distressStatus === 'Foreclosure') {
+      condition = 'Needs Renovation';
+      strategy = 'Fix & Flip or Value-Add';
+      renovationCost = '$20,000-50,000';
+    } else if (lowerDetails.includes('tear down') || lowerDetails.includes('land value')) {
+      condition = 'Major Rehab/Teardown';
+      strategy = 'Development';
+      renovationCost = '$100,000+';
+    } else {
+      condition = 'Needs Assessment';
+      strategy = 'Inspect & Determine';
+      renovationCost = '$10,000-30,000';
+    }
+
+    // Furnished status
+    if (lowerDetails.includes('furnished') || lowerDetails.includes('furniture')) {
+      furnished = 'Furnished';
+    } else if (lowerDetails.includes('unfurnished')) {
+      furnished = 'Unfurnished';
+    } else {
+      furnished = 'Unknown';
+    }
+
+    return {
+      condition: condition,
+      strategy: strategy,
+      renovation_cost: renovationCost,
+      furnished: furnished
+    };
+  }
+
+  // Recommend rental strategy based on location and property type
+  recommendRentalStrategy(zip, propertyType) {
+    const touristZips = ['96815', '96813', '96814']; // Waikiki, Kakaako, Ala Moana
+    const localZips = ['96744', '96782', '96819']; // Kaneohe, Pearl City, Pearl Harbor
+
+    if (touristZips.includes(zip)) {
+      return 'Short-term Rental (STR)';
+    } else if (localZips.includes(zip)) {
+      return 'Long-term Rental';
+    } else {
+      return 'Hybrid (STR/Long-term)';
+    }
+  }
+
+  // Assess source reliability
+  assessSourceReliability(source) {
+    const reliabilityMap = {
+      'Honolulu County Records': { credibility: 9, freshness: 'Current', items: ['Property tax status'] },
+      'Hawaii Legal Notices': { credibility: 8, freshness: 'Current', items: ['Court filing verification'] },
+      'Foreclosure.com': { credibility: 7, freshness: 'Recent', items: ['Auction date confirmation'] },
+      'OahuRE.com': { credibility: 6, freshness: 'Variable', items: ['Listing agent verification', 'Price accuracy'] },
+      'AI Scraped': { credibility: 5, freshness: 'Unknown', items: ['All data verification needed'] }
+    };
+
+    const sourceInfo = reliabilityMap[source] || reliabilityMap['AI Scraped'];
+    
+    return {
+      credibility: sourceInfo.credibility,
+      freshness: sourceInfo.freshness,
+      verification_items: sourceInfo.items
+    };
   }
 }
 

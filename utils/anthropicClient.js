@@ -17,6 +17,7 @@ PROPERTY DETAILS:
 - Price: $${property.price?.toLocaleString()}
 - Property Type: ${property.property_type}
 - Units: ${property.units || 'N/A'}
+- Square Footage: ${property.sqft || 'N/A'}
 - Distress Status: ${property.distress_status || 'Standard Market'}
 - Source: ${property.source}
 - Details: ${property.details || 'Limited details available'}
@@ -27,28 +28,64 @@ ${JSON.stringify(groqAnalysis, null, 2)}
 Please provide a detailed investment report including:
 
 1. EXECUTIVE SUMMARY (2-3 sentences)
+
 2. INVESTMENT HIGHLIGHTS (Top 3-5 bullet points)
-3. FINANCIAL ANALYSIS
-   - Estimated rental income potential
-   - Cash flow projections
-   - Cap rate estimation
-   - ROI analysis
-4. MARKET ANALYSIS
-   - Neighborhood overview
+
+3. TENANT REVENUE ANALYSIS
+   - Detailed rental income projections by unit
+   - Market rent comparisons for the area
+   - Seasonal rental variations (tourist vs local market)
+   - Vacancy rate assumptions
+   - Annual gross income potential
+
+4. LEASE & TENURE ANALYSIS
+   - Fee simple vs leasehold assessment
+   - Ground lease details (if applicable)
+   - Existing tenant lease terms and expiration dates
+   - Rent escalation clauses
+   - Hawaii-specific lease considerations
+
+5. PROPERTY CONDITION & INVESTMENT STRATEGY
+   - Move-in ready vs renovation requirements
+   - Fix and flip vs buy-and-hold recommendation
+   - Estimated renovation costs and timeline
+   - Furnished vs unfurnished rental strategy
+   - Short-term rental (STR) permit potential
+
+6. COMPREHENSIVE FINANCIAL ANALYSIS
+   - Monthly cash flow projections
+   - Operating expense estimates (taxes, insurance, maintenance)
+   - Cap rate and cash-on-cash return calculations
+   - Break-even analysis
+   - 5-year appreciation projections
+
+7. SOURCE DATA RELIABILITY
+   - Information source credibility assessment
+   - Data gaps and verification needs
+   - Recommended additional research
+
+8. MARKET ANALYSIS
+   - Neighborhood overview and trends
    - Comparable sales analysis
-   - Market trends impact
-5. RISK ASSESSMENT
+   - Tourism impact on rental market
+
+9. RISK ASSESSMENT
    - Primary risks and mitigation strategies
    - Market volatility factors
-6. DUE DILIGENCE CHECKLIST
-   - Key items to investigate
-   - Recommended inspections
-7. INVESTMENT RECOMMENDATION
-   - Buy/Hold/Pass recommendation with reasoning
-   - Optimal purchase price range
-   - Timeline for decision
+   - Regulatory risks (STR restrictions, rent control)
 
-Format the report in clear sections with actionable insights for a real estate investor.
+10. DUE DILIGENCE CHECKLIST
+    - Financial document verification
+    - Property inspection priorities
+    - Legal and zoning confirmations
+
+11. INVESTMENT RECOMMENDATION
+    - Buy/Hold/Pass recommendation with reasoning
+    - Optimal purchase price range
+    - Recommended financing structure
+    - Timeline and next steps
+
+Format the report in clear sections with specific numbers and actionable insights.
 `;
 
       const message = await this.anthropic.messages.create({

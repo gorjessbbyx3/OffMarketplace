@@ -722,6 +722,115 @@ function handleZipCodeChange() {
         customZipInput.style.display = 'none';
         customZipInput.value = '';
     }
+
+    // Display off-market leads with enhanced information
+    displayOffMarketLeads(leads) {
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '<h3>🎯 Off-Market Investment Opportunities</h3>';
+
+        leads.forEach(lead => {
+            const urgencyColor = {
+                'critical': 'danger',
+                'high': 'warning', 
+                'medium': 'info',
+                'low': 'secondary'
+            }[lead.urgency_level] || 'secondary';
+
+            const leadCard = document.createElement('div');
+            leadCard.className = `card mb-3 border-${urgencyColor}`;
+            
+            // Parse enhanced analysis data
+            const tenantAnalysis = lead.tenant_revenue_analysis || {};
+            const leaseAnalysis = lead.lease_analysis || {};
+            const conditionAssessment = lead.condition_assessment || {};
+            const sourceReliability = lead.source_reliability || {};
+
+            leadCard.innerHTML = `
+                <div class="card-header bg-${urgencyColor} text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">${lead.address}</h5>
+                        <span class="badge badge-light">Score: ${lead.off_market_score}/100</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>📊 Property Details</h6>
+                            <ul class="list-unstyled small">
+                                <li><strong>Price:</strong> $${lead.price?.toLocaleString() || 'N/A'}</li>
+                                <li><strong>Type:</strong> ${lead.property_type}</li>
+                                <li><strong>Status:</strong> ${lead.distress_status}</li>
+                                <li><strong>Urgency:</strong> <span class="badge badge-${urgencyColor}">${lead.urgency_level?.toUpperCase()}</span></li>
+                                <li><strong>Estimated Discount:</strong> ${lead.estimated_discount}</li>
+                            </ul>
+
+                            <h6>💰 Revenue Analysis</h6>
+                            <ul class="list-unstyled small">
+                                <li><strong>Est. Monthly Rent:</strong> ${tenantAnalysis.estimated_monthly_rent || 'Analyzing...'}</li>
+                                <li><strong>Annual Income:</strong> ${tenantAnalysis.annual_rental_income || 'TBD'}</li>
+                                <li><strong>Rental Strategy:</strong> ${tenantAnalysis.rental_strategy || 'To be determined'}</li>
+                            </ul>
+
+                            <h6>📋 Lease & Condition</h6>
+                            <ul class="list-unstyled small">
+                                <li><strong>Tenure:</strong> ${leaseAnalysis.tenure_type?.replace('_', ' ') || 'Unknown'}</li>
+                                <li><strong>Condition:</strong> ${conditionAssessment.property_condition?.replace('_', ' ') || 'Needs assessment'}</li>
+                                <li><strong>Strategy:</strong> ${conditionAssessment.investment_strategy || 'TBD'}</li>
+                                <li><strong>Renovation Est:</strong> ${conditionAssessment.renovation_estimate || 'To be estimated'}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>🔍 Motivation Signals</h6>
+                            <ul class="small">
+                                ${lead.motivation_signals?.map(signal => `<li>${signal}</li>`).join('') || '<li>Analyzing seller motivation...</li>'}
+                            </ul>
+
+                            <h6>📈 Off-Market Indicators</h6>
+                            <ul class="small">
+                                ${lead.off_market_indicators?.map(indicator => `<li>${indicator}</li>`).join('') || '<li>Evaluating market indicators...</li>'}
+                            </ul>
+
+                            <h6>📊 Source Reliability</h6>
+                            <ul class="list-unstyled small">
+                                <li><strong>Source:</strong> ${lead.source}</li>
+                                <li><strong>Credibility:</strong> ${sourceReliability.credibility_score || 'N/A'}/10</li>
+                                <li><strong>Data Status:</strong> ${sourceReliability.data_freshness || 'Unknown'}</li>
+                            </ul>
+
+                            <h6>🎯 Action Plan</h6>
+                            <ul class="small">
+                                ${lead.action_plan?.map(action => `<li>${action}</li>`).join('') || '<li>Generating action plan...</li>'}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <h6>🤖 AI Analysis</h6>
+                        <p class="small text-muted">${lead.ai_reasoning || 'AI analysis in progress...'}</p>
+                        
+                        <div class="mt-2">
+                            <strong>Contact Strategy:</strong> 
+                            <span class="text-info">${lead.contact_strategy || 'Developing contact approach...'}</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 text-center">
+                        <button class="btn btn-primary btn-sm" onclick="addToLeads('${lead.id}')">
+                            <i class="fas fa-plus"></i> Add to Leads
+                        </button>
+                        <button class="btn btn-info btn-sm ml-2" onclick="calculateROI('${lead.id}')">
+                            <i class="fas fa-calculator"></i> Calculate ROI
+                        </button>
+                        <button class="btn btn-secondary btn-sm ml-2" onclick="viewDetailedAnalysis('${lead.id}')">
+                            <i class="fas fa-chart-line"></i> Detailed Analysis
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            resultsDiv.appendChild(leadCard);
+        });
+    }
 }
 
 // Find off-market leads

@@ -11,24 +11,58 @@ class GroqClient {
   async analyzeProperty(property) {
     try {
       const prompt = `
-Analyze this Hawaii property as a real estate investment opportunity:
+Analyze this Hawaii property as a comprehensive real estate investment opportunity:
 
+PROPERTY DETAILS:
 Address: ${property.address}
 Price: $${property.price?.toLocaleString()}
 Property Type: ${property.property_type}
+Units: ${property.units || 1}
+Square Footage: ${property.sqft || 'N/A'}
 Distress Status: ${property.distress_status}
 Source: ${property.source}
 Details: ${property.details || 'N/A'}
 
 Provide a comprehensive analysis including:
-1. Investment potential score (1-10)
-2. Key opportunities and risks
-3. Market positioning analysis
-4. Recommended next steps
-5. Estimated ROI potential
-6. Whether this appears to be off-market or pre-market
 
-Format as JSON with clear sections.
+1. TENANT REVENUE ANALYSIS:
+   - Estimated monthly rent per unit
+   - Total monthly rental income potential
+   - Annual gross rental income
+   - Occupancy rate assumptions for Hawaii market
+   - Seasonal rental variations (tourist vs long-term)
+
+2. LEASE STRUCTURE ANALYSIS:
+   - Fee simple vs leasehold determination
+   - If leasehold: estimated lease expiration, ground rent
+   - Existing tenant lease terms (if any)
+   - Rent control considerations in Hawaii
+
+3. PROPERTY CONDITION ASSESSMENT:
+   - Move-in ready vs renovation needed
+   - Fix and flip potential vs buy and hold
+   - Estimated renovation costs if needed
+   - Furnished vs unfurnished rental potential
+   - Property age and maintenance requirements
+
+4. FINANCIAL PROJECTIONS:
+   - Cash flow analysis (income - expenses)
+   - Cap rate estimation
+   - Cash-on-cash return
+   - Total ROI including appreciation
+
+5. SOURCE RELIABILITY:
+   - Data source credibility (1-10)
+   - Information completeness
+   - Last updated/verification status
+
+6. INVESTMENT STRATEGY RECOMMENDATION:
+   - Buy and hold vs flip recommendation
+   - Short-term rental (Airbnb) vs long-term rental
+   - Value-add opportunities
+   - Exit strategy options
+
+Format as JSON with detailed calculations and reasoning.
 `;
 
       const completion = await this.groq.chat.completions.create({

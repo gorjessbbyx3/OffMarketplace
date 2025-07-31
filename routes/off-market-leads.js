@@ -104,12 +104,14 @@ router.post('/find-off-market-leads', async (req, res) => {
 // Analyze individual property for off-market potential
 async function analyzeOffMarketPotential(property) {
   try {
-    const prompt = `Analyze this Hawaii property for off-market potential and motivated seller indicators:
+    const prompt = `Analyze this Hawaii property for off-market potential and comprehensive investment opportunity:
 
 Property Details:
 - Address: ${property.address}
 - Price: $${property.price?.toLocaleString() || 'N/A'}
 - Type: ${property.property_type}
+- Units: ${property.units || 1}
+- Square Footage: ${property.sqft || 'N/A'}
 - Status: ${property.distress_status}
 - Source: ${property.source}
 - Listed Date: ${property.created_at}
@@ -121,25 +123,39 @@ Analyze for OFF-MARKET POTENTIAL based on:
    - Estate sales, divorce proceedings
    - Tax delinquency, code violations
 
-2. PRICING SIGNALS:
+2. TENANT REVENUE POTENTIAL:
+   - Current rental income (if occupied)
+   - Market rent potential per unit
+   - Vacancy rates and rental demand
+   - Short-term vs long-term rental viability
+
+3. LEASE STRUCTURE ANALYSIS:
+   - Fee simple vs leasehold indicators
+   - Ground lease terms and expiration
+   - Existing tenant lease details
+   - Rent control implications
+
+4. PROPERTY CONDITION ASSESSMENT:
+   - Move-in ready vs renovation needed
+   - Fix and flip potential vs buy-and-hold
+   - Deferred maintenance indicators
+   - Furnished vs unfurnished condition
+
+5. PRICING SIGNALS:
    - Below market value indicators
+   - Price per square foot analysis
    - Rapid price reductions
    - Unusual pricing patterns
 
-3. PROPERTY CONDITIONS:
-   - Deferred maintenance signals
-   - Vacancy indicators
-   - Property age and condition
-
-4. SELLER MOTIVATION:
+6. SELLER MOTIVATION:
    - Time on market patterns
    - Multiple listing attempts
-   - Source reliability (foreclosure.com, legal notices)
+   - Financial distress signals
 
-5. MARKET TIMING:
-   - Seasonal factors
-   - Economic pressures
-   - Local market conditions
+7. SOURCE RELIABILITY:
+   - Data source credibility and freshness
+   - Information completeness
+   - Verification status
 
 Provide JSON response:
 {
@@ -147,6 +163,27 @@ Provide JSON response:
   "reasoning": "detailed analysis",
   "indicators": ["specific signals found"],
   "motivation_signals": ["seller motivation factors"],
+  "tenant_revenue_analysis": {
+    "estimated_monthly_rent": "per unit",
+    "annual_rental_income": "total",
+    "rental_strategy": "short-term|long-term|hybrid"
+  },
+  "lease_analysis": {
+    "tenure_type": "fee_simple|leasehold|unknown",
+    "lease_expiration": "date or N/A",
+    "ground_rent": "monthly amount or N/A"
+  },
+  "condition_assessment": {
+    "property_condition": "move_in_ready|needs_renovation|major_rehab",
+    "investment_strategy": "flip|hold|value_add",
+    "renovation_estimate": "cost range",
+    "furnished_status": "furnished|unfurnished|partially_furnished"
+  },
+  "source_reliability": {
+    "credibility_score": 0-10,
+    "data_freshness": "current|outdated|unknown",
+    "verification_needed": ["items to verify"]
+  },
   "urgency": "critical|high|medium|low",
   "estimated_discount": "percentage below market",
   "contact_strategy": "recommended approach",
