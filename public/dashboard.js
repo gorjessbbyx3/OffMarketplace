@@ -170,12 +170,12 @@ class PropertyDashboard {
                             <button class="btn btn-sm btn-success" onclick="dashboard.openROICalculator(${property.id})">
                                 <i class="fas fa-calculator"></i> ROI
                             </button>
-                            <button class="btn btn-sm btn-primary" onclick="dashboard.addToLeads('${property.id}')">
-                                <i class="fas fa-star"></i> Lead
+                            <button class="btn btn-sm btn-primary" onclick="savePropertyToLeads('${property.id}')">
+                                <i class="fas fa-star"></i> Save Lead
                             </button>
-                            ${aiAnalysis ? `<button class="btn btn-sm btn-info" onclick="dashboard.analyzeProperty('${property.id}')">
-                                <i class="fas fa-chart-line"></i> Analyze
-                            </button>` : ''}
+                            <button class="btn btn-sm btn-info" onclick="generateDetailedPropertyReport('${property.id}')">
+                                <i class="fas fa-file-alt"></i> Report
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -507,7 +507,7 @@ async function viewScrapedProperties() {
     try {
         const response = await fetch('/api/properties');
         const properties = await response.json();
-        
+
         if (properties && properties.length > 0) {
             displayPropertiesInContainer(properties);
             if (dashboard) {
@@ -530,7 +530,7 @@ async function viewScrapedProperties() {
 function displayPropertiesInContainer(properties) {
     const container = document.getElementById('propertiesContainer');
     const countBadge = document.getElementById('resultsCount');
-    
+
     if (countBadge) {
         countBadge.textContent = `${properties.length} properties`;
     }
@@ -576,8 +576,11 @@ function displayPropertiesInContainer(properties) {
                     <button class="btn btn-sm btn-success" onclick="viewPropertyDetails('${property.id}')">
                         <i class="fas fa-eye"></i> View
                     </button>
-                    <button class="btn btn-sm btn-primary" onclick="addToLeads('${property.id}')">
-                        <i class="fas fa-star"></i> Add Lead
+                    <button class="btn btn-sm btn-primary" onclick="savePropertyToLeads('${property.id}')">
+                        <i class="fas fa-star"></i> Save Lead
+                    </button>
+                    <button class="btn btn-sm btn-info" onclick="generateDetailedPropertyReport('${property.id}')">
+                        <i class="fas fa-file-alt"></i> Report
                     </button>
                 </div>
             </div>
@@ -590,8 +593,12 @@ function viewPropertyDetails(propertyId) {
     alert(`Viewing details for property ${propertyId}`);
 }
 
-function addToLeads(propertyId) {
-    alert(`Added property ${propertyId} to leads`);
+function savePropertyToLeads(propertyId) {
+    alert(`Saving property ${propertyId} to leads`);
+}
+
+function generateDetailedPropertyReport(propertyId) {
+    alert(`Generating detailed report for property ${propertyId}`);
 }
 
 // Global functions for button clicks
@@ -866,7 +873,7 @@ async function findOffMarketLeads() {
     function displayOffMarketLeads(leads) {
         const resultsDiv = document.getElementById('results');
 
-        if (!resultsDiv) {
+if (!resultsDiv) {
             console.error("Results div not found.");
             return;
         }

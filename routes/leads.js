@@ -2,6 +2,53 @@ const express = require('express');
 const router = express.Router();
 const { client } = require('../database/connection');
 
+// Save property as lead
+router.post('/', async (req, res) => {
+  try {
+    const { property_id, lead_source, status, priority, notes } = req.body;
+    
+    // Get property details
+    const propertyResult = await client.execute({
+      sql: 'SELECT * FROM properties WHERE id = ?',
+      args: [property_id]
+    });
+    
+    if (propertyResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Property not found' });
+    }
+    
+    const property = propertyResult.rows[0];
+    
+    // Insert into leads table
+    const result = await client.execute({
+      sql: `INSERT INTO leads (
+        property_id, address, price, property_type, lead_source, 
+        status, priority, notes, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      args: [
+        property_id,
+        property.address,
+        property.price,
+        property.property_type,
+        lead_source || 'Manual',
+        status || 'New',
+        priority || 'Medium',
+        notes || ''
+      ]
+    });
+    
+    res.json({ 
+      success: true, 
+      lead_id: result.lastInsertRowid,
+      message: 'Property saved as lead successfully' 
+    });
+    
+  } catch (error) {
+    console.error('Error saving lead:', error);
+    res.status(500).json({ error: 'Failed to save lead' });
+  }
+});
+
 // Get all leads
 router.get('/', async (req, res) => {
   try {
