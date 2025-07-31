@@ -141,10 +141,6 @@ router.get('/generate-leads', async (req, res) => {
 });
 
 module.exports = router;
-const puppeteer = require('puppeteer');
-const cheerio = require('cheerio');
-const axios = require('axios');
-const client = require('../database/connection');
 
 // Scrape properties from multiple sources
 router.post('/scrape-hawaii', async (req, res) => {
@@ -475,11 +471,7 @@ function fallbackAnalysis(property) {
   };
 }
 
-module.exports = router;
-function fallbackAnalysis(property) {
-  const analysis = {
-    investment_score: Math.floor(Math.random() * 100),
-    estimated_roi: (Math.random() * 15 + 2).toFixed(1),
+
     market_trends: generateMarketAnalysis(property),
     risk_factors: identifyRiskFactors(property),
     opportunity_score: calculateOpportunityScore(property),
