@@ -10,6 +10,7 @@
     "test:kakaako": "node test-kakaako.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.57.0",
     "@libsql/client": "^0.4.3",
     "axios": "^1.11.0",
     "cheerio": "^1.1.2",

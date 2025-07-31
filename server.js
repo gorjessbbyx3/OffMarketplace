@@ -16,11 +16,13 @@ const propertyRoutes = require('./routes/properties');
 const leadRoutes = require('./routes/leads');
 const scraperRoutes = require('./routes/scraper');
 
-// Use routes
-app.use('/api/scraper', require('./routes/scraper'));
+// Routes
 app.use('/api/properties', require('./routes/properties'));
 app.use('/api/leads', require('./routes/leads'));
 app.use('/api/ai', require('./routes/ai-analysis'));
+app.use('/api/ai', require('./routes/ai-chat'));
+app.use('/api/scraper', require('./routes/scraper'));
+app.use('/api/scraper', require('./routes/image-scraper'));
 app.use('/api/test', require('./routes/test-groq'));
 
 // Serve React app
@@ -31,3 +33,4 @@ app.get('*', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
+```The code adds new routes for AI chat and image scraping to the existing Express app.
