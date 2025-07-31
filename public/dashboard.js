@@ -502,6 +502,98 @@ Try asking: "Find me a duplex in Kakaako under $1M" or "What's the current marke
     }
 }
 
+// View scraped properties
+async function viewScrapedProperties() {
+    try {
+        const response = await fetch('/api/properties');
+        const properties = await response.json();
+        
+        if (properties && properties.length > 0) {
+            displayPropertiesInContainer(properties);
+            if (dashboard) {
+                dashboard.addMessage(`Found ${properties.length} scraped properties in database.`, 'ai');
+            }
+        } else {
+            if (dashboard) {
+                dashboard.addMessage('No properties found in database.', 'ai');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading properties:', error);
+        if (dashboard) {
+            dashboard.addMessage('Error loading properties.', 'ai');
+        }
+    }
+}
+
+// Helper function to display properties in container
+function displayPropertiesInContainer(properties) {
+    const container = document.getElementById('propertiesContainer');
+    const countBadge = document.getElementById('resultsCount');
+    
+    if (countBadge) {
+        countBadge.textContent = `${properties.length} properties`;
+    }
+
+    if (!container) return;
+
+    if (properties.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center text-muted">
+                <i class="fas fa-search fa-3x mb-3"></i>
+                <p>No properties found.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = properties.map(property => `
+        <div class="col-md-6 col-lg-4">
+            <div class="property-card">
+                <h6 class="mb-2">${property.address || 'Unknown Address'}</h6>
+                <div class="row">
+                    <div class="col-6">
+                        <small class="text-muted">Price:</small><br>
+                        <strong>$${Number(property.price || 0).toLocaleString()}</strong>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Type:</small><br>
+                        ${property.property_type || 'N/A'}
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-6">
+                        <small class="text-muted">Status:</small><br>
+                        ${property.distress_status || 'N/A'}
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Source:</small><br>
+                        ${property.source || 'N/A'}
+                    </div>
+                </div>
+                ${property.str_roi ? `<span class="roi-badge mt-2 d-inline-block">ROI: ${property.str_roi.toFixed(1)}%</span>` : ''}
+                <div class="mt-3">
+                    <button class="btn btn-sm btn-success" onclick="viewPropertyDetails('${property.id}')">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="addToLeads('${property.id}')">
+                        <i class="fas fa-star"></i> Add Lead
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Helper functions for property actions
+function viewPropertyDetails(propertyId) {
+    alert(`Viewing details for property ${propertyId}`);
+}
+
+function addToLeads(propertyId) {
+    alert(`Added property ${propertyId} to leads`);
+}
+
 // Global functions for button clicks
 async function generateAILeads() {
     document.getElementById('leadsContainer').innerHTML = `
@@ -660,7 +752,18 @@ function sendMessage() {
 
 // Search properties from dashboard
 async function searchProperties() {
-    await dashboard.searchProperties();
+    if (dashboard) {
+        await dashboard.searchProperties();
+    } else {
+        // Fallback direct search
+        try {
+            const response = await fetch('/api/properties');
+            const properties = await response.json();
+            displayPropertiesInContainer(properties);
+        } catch (error) {
+            console.error('Search error:', error);
+        }
+    }
 }
 
 // Clear search filters
@@ -685,7 +788,7 @@ function clearFilters() {
     document.getElementById('resultsCount').textContent = '0 properties';
 }
 
-// Scrape Hawaii properties
+// Scrape Hawaii properties  
 async function scrapeHawaiiProperties() {
     dashboard.addMessage('Starting Hawaii property scraping...', 'ai');
 
