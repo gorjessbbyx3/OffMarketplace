@@ -2,8 +2,8 @@ const { createClient } = require('@libsql/client');
 require('dotenv').config();
 
 if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
-  console.error('Missing required environment variables: TURSO_DATABASE_URL and TURSO_AUTH_TOKEN');
-  console.log('Please check your .env file or set these environment variables');
+  console.warn('Missing required environment variables: TURSO_DATABASE_URL and TURSO_AUTH_TOKEN');
+  console.log('Falling back to local SQLite database');
 }
 
 const client = createClient({
@@ -68,4 +68,4 @@ async function initDatabase() {
 
 initDatabase();
 
-module.exports = client;
+module.exports = { client, initDatabase };

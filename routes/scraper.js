@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const client = require('../database/connection');
+const { client } = require('../database/connection');
 const HawaiiPropertyScraper = require('../scrapers/hawaiiPropertyScraper');
 const axios = require('axios');
 const puppeteer = require('puppeteer');

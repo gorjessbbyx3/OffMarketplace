@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const GroqClient = require('../utils/groqClient');
 const AnthropicClient = require('../utils/anthropicClient');
-const client = require('../database/connection');
+const { client } = require('../database/connection');
 
 // Get comprehensive AI market insights using dual AI system
 router.post('/market-analysis', async (req, res) => {

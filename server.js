@@ -3,6 +3,14 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
+// Initialize database
+const { initDatabase } = require('./database/connection');
+initDatabase().then(() => {
+  console.log('✅ Database initialized successfully');
+}).catch(err => {
+  console.error('❌ Database initialization failed:', err);
+});
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -36,10 +44,15 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server successfully running on http://0.0.0.0:${PORT}`);
+  console.log('🏠 Dashboard available at: /dashboard.html');
 }).on('error', (err) => {
-  console.error('Server failed to start:', err);
+  console.error('❌ Server failed to start:', err);
   if (err.code === 'EADDRINUSE') {
     console.log(`Port ${PORT} is already in use. Trying port ${PORT + 1}...`);
+    app.listen(PORT + 1, '0.0.0.0');
+  } else {
+    console.error('Full error details:', err);
+    process.exit(1);
   }
 });

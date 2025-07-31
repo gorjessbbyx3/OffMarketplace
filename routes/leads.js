@@ -1,7 +1,7 @@
 
 const express = require('express');
 const router = express.Router();
-const client = require('../database/connection');
+const { client } = require('../database/connection');
 
 // Get all leads
 router.get('/', async (req, res) => {
