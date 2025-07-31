@@ -305,6 +305,34 @@
             color: #e74c3c;
             font-style: italic;
         }
+
+        .property-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: white;
+            transition: transform 0.2s;
+        }
+
+        .property-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .roi-badge {
+            background-color: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+        }
+
+        .ai-analysis {
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -340,8 +368,8 @@
                         <button class="btn btn-info" onclick="getMarketAnalysis()">
                             <i class="fas fa-chart-line"></i> Market Analysis
                         </button>
-                        <button class="btn btn-warning" onclick="scrapeProperties()">
-                            <i class="fas fa-download"></i> Scrape New Properties
+                        <button class="btn btn-warning" onclick="generateDetailedReports()">
+                            <i class="fas fa-file-alt"></i> Detailed Reports
                         </button>
                     </div>
                 </div>
@@ -396,6 +424,101 @@
                         <div class="stats-card">
                             <div class="stats-number" id="avgROI">0%</div>
                             <div class="text-muted">Avg ROI</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Property Search Filters -->
+                <div class="leads-container mb-4">
+                    <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+                        <h5><i class="fas fa-search"></i> Property Search</h5>
+                        <button class="btn btn-sm btn-outline-primary" onclick="clearFilters()">
+                            <i class="fas fa-eraser"></i> Clear
+                        </button>
+                    </div>
+                    <div class="p-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="zipCode" class="form-label">Zip Code</label>
+                                <select class="form-select" id="zipCode">
+                                    <option value="">All Zip Codes</option>
+                                    <option value="96814">96814</option>
+                                    <option value="96815">96815</option>
+                                    <option value="96826">96826</option>
+                                    <option value="96813">96813</option>
+                                    <option value="96817">96817</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="propertyType" class="form-label">Property Type</label>
+                                <select class="form-select" id="propertyType">
+                                    <option value="">All Types</option>
+                                    <option value="Single-family">Single-family</option>
+                                    <option value="Multi-family">Multi-family</option>
+                                    <option value="Condo">Condo</option>
+                                    <option value="Commercial">Commercial</option>
+                                    <option value="Land">Land</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-4">
+                                <label for="maxPrice" class="form-label">Max Price</label>
+                                <select class="form-select" id="maxPrice">
+                                    <option value="">No Limit</option>
+                                    <option value="500000">$500K</option>
+                                    <option value="1000000">$1M</option>
+                                    <option value="2000000">$2M</option>
+                                    <option value="4000000">$4M</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="distressStatus" class="form-label">Distress Status</label>
+                                <select class="form-select" id="distressStatus">
+                                    <option value="">All Status</option>
+                                    <option value="Pre-foreclosure">Pre-foreclosure</option>
+                                    <option value="Short Sale">Short Sale</option>
+                                    <option value="Vacant">Vacant</option>
+                                    <option value="Estate Sale">Estate Sale</option>
+                                    <option value="Foreclosure">Foreclosure</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="sourceFilter" class="form-label">Source</label>
+                                <select class="form-select" id="sourceFilter">
+                                    <option value="">All Sources</option>
+                                    <option value="Foreclosure.com">Foreclosure.com</option>
+                                    <option value="OahuRE.com">OahuRE.com</option>
+                                    <option value="PropStream">PropStream</option>
+                                    <option value="MLS">MLS</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <button class="btn btn-primary" onclick="searchProperties()">
+                                    <i class="fas fa-search"></i> Search Properties
+                                </button>
+                                <button class="btn btn-success ms-2" onclick="scrapeHawaiiProperties()">
+                                    <i class="fas fa-download"></i> Scrape New Properties
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Property Results -->
+                <div class="leads-container mb-4">
+                    <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+                        <h5><i class="fas fa-home"></i> Property Results</h5>
+                        <span id="resultsCount" class="badge bg-secondary">0 properties</span>
+                    </div>
+                    <div class="p-3">
+                        <div id="propertiesContainer" class="row">
+                            <div class="col-12 text-center text-muted">
+                                <i class="fas fa-search fa-3x mb-3"></i>
+                                <p>Use the search filters above to find properties</p>
+                            </div>
                         </div>
                     </div>
                 </div>

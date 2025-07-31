@@ -74,6 +74,139 @@ class PropertyDashboard {
         }
     }
 
+    async searchProperties() {
+        const filters = {
+            zip: document.getElementById('zipCode').value,
+            property_type: document.getElementById('propertyType').value,
+            max_price: document.getElementById('maxPrice').value,
+            distress_status: document.getElementById('distressStatus').value,
+            source: document.getElementById('sourceFilter').value
+        };
+
+        // Remove empty filters
+        Object.keys(filters).forEach(key => {
+            if (!filters[key]) delete filters[key];
+        });
+
+        try {
+            const queryParams = new URLSearchParams(filters);
+            const response = await fetch(`/api/properties?${queryParams}`);
+            const properties = await response.json();
+            
+            this.displayProperties(properties);
+            this.addMessage(`Found ${properties.length} properties matching your search criteria.`, 'ai');
+        } catch (error) {
+            console.error('Error fetching properties:', error);
+            this.addMessage('Error loading properties. Please try again.', 'ai');
+        }
+    }
+
+    displayProperties(properties) {
+        const container = document.getElementById('propertiesContainer');
+        const countBadge = document.getElementById('resultsCount');
+        
+        countBadge.textContent = `${properties.length} properties`;
+        
+        if (properties.length === 0) {
+            container.innerHTML = `
+                <div class="col-12 text-center text-muted">
+                    <i class="fas fa-search fa-3x mb-3"></i>
+                    <p>No properties found matching your criteria.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = properties.map(property => {
+            const aiAnalysis = property.ai_analysis ? JSON.parse(property.ai_analysis) : null;
+            
+            return `
+                <div class="col-md-6 col-lg-4">
+                    <div class="property-card">
+                        <h6 class="mb-2">${property.address}</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <small class="text-muted">Price:</small><br>
+                                <strong>$${Number(property.price || 0).toLocaleString()}</strong>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Type:</small><br>
+                                ${property.property_type || 'N/A'}
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-6">
+                                <small class="text-muted">Status:</small><br>
+                                ${property.distress_status || 'N/A'}
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Source:</small><br>
+                                ${property.source || 'N/A'}
+                            </div>
+                        </div>
+                        
+                        ${property.str_roi ? `<span class="roi-badge mt-2 d-inline-block">ROI: ${property.str_roi.toFixed(1)}%</span>` : ''}
+                        
+                        ${aiAnalysis ? `
+                            <div class="ai-analysis mt-2">
+                                <span class="badge bg-info">AI Score: ${aiAnalysis.opportunity_score || 'N/A'}/100</span>
+                                ${aiAnalysis.estimated_roi ? `<span class="badge bg-success ms-1">Est. ROI: ${aiAnalysis.estimated_roi}%</span>` : ''}
+                            </div>
+                            <small class="text-muted d-block mt-1">${aiAnalysis.ai_insights || ''}</small>
+                        ` : ''}
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-success" onclick="dashboard.openROICalculator(${property.id})">
+                                <i class="fas fa-calculator"></i> ROI
+                            </button>
+                            <button class="btn btn-sm btn-primary" onclick="dashboard.addToLeads('${property.id}')">
+                                <i class="fas fa-star"></i> Lead
+                            </button>
+                            ${aiAnalysis ? `<button class="btn btn-sm btn-info" onclick="dashboard.analyzeProperty('${property.id}')">
+                                <i class="fas fa-chart-line"></i> Analyze
+                            </button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    openROICalculator(propertyId) {
+        const rentalIncome = prompt('Enter monthly rental income ($):');
+        const expenses = prompt('Enter annual expenses ($):');
+        
+        if (rentalIncome && expenses) {
+            this.calculateROI(propertyId, rentalIncome, expenses);
+        }
+    }
+
+    async calculateROI(propertyId, rentalIncome, expenses) {
+        try {
+            const response = await fetch(`/api/properties/${propertyId}/calculate-roi`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    rental_income: parseFloat(rentalIncome),
+                    expenses: parseFloat(expenses)
+                })
+            });
+
+            const result = await response.json();
+            
+            this.addMessage(`ROI Calculation Results:
+                Annual Revenue: $${result.annual_revenue.toLocaleString()}
+                Net Operating Income: $${result.noi.toLocaleString()}
+                ROI: ${result.roi.toFixed(2)}%`, 'ai');
+
+        } catch (error) {
+            console.error('Error calculating ROI:', error);
+            this.addMessage('Error calculating ROI. Please try again.', 'ai');
+        }
+    }
+
     displayLeads(leads) {
         if (leads.length === 0) {
             this.leadsContainer.innerHTML = `
@@ -336,6 +469,66 @@ async function refreshLeads() {
 
 function sendMessage() {
     dashboard.sendMessage();
+}
+
+// Search properties from dashboard
+async function searchProperties() {
+    await dashboard.searchProperties();
+}
+
+// Clear search filters
+function clearFilters() {
+    document.getElementById('zipCode').value = '';
+    document.getElementById('propertyType').value = '';
+    document.getElementById('maxPrice').value = '';
+    document.getElementById('distressStatus').value = '';
+    document.getElementById('sourceFilter').value = '';
+    
+    dashboard.addMessage('Search filters cleared.', 'ai');
+    
+    // Clear results
+    document.getElementById('propertiesContainer').innerHTML = `
+        <div class="col-12 text-center text-muted">
+            <i class="fas fa-search fa-3x mb-3"></i>
+            <p>Use the search filters above to find properties</p>
+        </div>
+    `;
+    document.getElementById('resultsCount').textContent = '0 properties';
+}
+
+// Scrape Hawaii properties
+async function scrapeHawaiiProperties() {
+    dashboard.addMessage('Starting Hawaii property scraping...', 'ai');
+    
+    try {
+        const response = await fetch('/api/scraper/scrape-hawaii', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            dashboard.addMessage(`Scraping complete! Found ${result.total_scraped} properties with ${result.new_properties} new additions.`, 'ai');
+            dashboard.updateStats();
+            
+            // Auto-refresh search results if filters are applied
+            const hasFilters = document.getElementById('zipCode').value || 
+                             document.getElementById('propertyType').value || 
+                             document.getElementById('maxPrice').value;
+            if (hasFilters) {
+                setTimeout(() => dashboard.searchProperties(), 2000);
+            }
+        } else {
+            dashboard.addMessage(`Scraping encountered issues: ${result.error}`, 'ai');
+        }
+
+    } catch (error) {
+        console.error('Scraping error:', error);
+        dashboard.addMessage('Scraping failed. Please check the server status.', 'ai');
+    }
 }
 
 // Initialize dashboard when page loads
