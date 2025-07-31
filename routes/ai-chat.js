@@ -23,7 +23,7 @@ async function getHawaiiZoningInfo(location) {
     'P-1': { name: 'Restricted Preservation', allowed: ['Conservation', 'Limited recreation'], density: 'None' },
     'P-2': { name: 'General Preservation', allowed: ['Parks', 'Open space', 'Recreation'], density: 'Very Low' }
   };
-  
+
   // Common Honolulu area zonings for investment properties
   const investmentZonings = {
     'Kakaako': ['A-2', 'BMX-3', 'B-2'], // High-density mixed use
@@ -35,7 +35,7 @@ async function getHawaiiZoningInfo(location) {
     'Waikiki': ['A-2', 'B-2'], // Tourist/residential high-density
     'Chinatown': ['BMX-3', 'B-1', 'A-2'] // Historic mixed-use
   };
-  
+
   return { hawaiiZoningData, investmentZonings };
 }
 
@@ -262,19 +262,19 @@ router.get('/zoning/:area', async (req, res) => {
   try {
     const area = req.params.area.toLowerCase();
     const { hawaiiZoningData, investmentZonings } = await getHawaiiZoningInfo();
-    
+
     // Find matching area
     const areaMatch = Object.keys(investmentZonings).find(key => 
       key.toLowerCase().includes(area) || area.includes(key.toLowerCase())
     );
-    
+
     if (areaMatch) {
       const zones = investmentZonings[areaMatch];
       const zoneDetails = zones.map(zone => ({
         code: zone,
         ...hawaiiZoningData[zone]
       }));
-      
+
       res.json({
         success: true,
         area: areaMatch,
@@ -301,7 +301,7 @@ router.get('/zoning/:area', async (req, res) => {
 // Generate investment analysis based on zoning
 function generateZoningInvestmentAnalysis(zoneDetails) {
   const analysis = [];
-  
+
   zoneDetails.forEach(zone => {
     if (zone.code.includes('A-')) {
       analysis.push(`${zone.code}: Excellent for multi-family investments and rental properties`);
@@ -315,7 +315,7 @@ function generateZoningInvestmentAnalysis(zoneDetails) {
       analysis.push(`${zone.code}: Large lot development potential, agricultural exemptions possible`);
     }
   });
-  
+
   return analysis;
 }
 

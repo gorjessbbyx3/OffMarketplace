@@ -1120,10 +1120,13 @@ async function generateLeads() {
     try {
         showLoading(true);
 
+        // Use fast lead generation without AI analysis
         const response = await fetch('/api/ai/generate-leads', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                min_score: 60,
+                include_ai_analysis: false,
                 criteria: { location, propertyType, budget: parseInt(budget), investmentGoals: goals }
             })
         });
