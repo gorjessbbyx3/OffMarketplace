@@ -4,12 +4,12 @@ const router = express.Router();
 const client = require('../database/connection');
 const HawaiiPropertyScraper = require('../scrapers/hawaiiPropertyScraper');
 
-// Trigger scraping of Hawaii properties
+// Trigger AI-powered scraping of Hawaii properties
 router.post('/scrape-hawaii', async (req, res) => {
   try {
-    console.log('Starting Hawaii property scraping...');
+    console.log('Starting AI-powered Hawaii property scraping...');
     const scraper = new HawaiiPropertyScraper();
-    const properties = await scraper.scrapeAllSources();
+    const properties = await scraper.scrapeAllSourcesWithAI();
 
     if (properties.length === 0) {
       return res.json({ 
@@ -66,6 +66,43 @@ router.post('/scrape-hawaii', async (req, res) => {
     console.error('Error in scraping route:', error);
     res.status(500).json({ 
       error: 'Failed to scrape properties',
+      details: error.message 
+    });
+  }
+});
+
+// Test individual AI scrapers
+router.post('/test-ai-scraper/:source', async (req, res) => {
+  try {
+    const { source } = req.params;
+    const scraper = new HawaiiPropertyScraper();
+    let properties = [];
+
+    switch (source) {
+      case 'oahure':
+        properties = await scraper.scrapeOahuREWithAI();
+        break;
+      case 'foreclosure':
+        properties = await scraper.scrapeForeclosureComWithAI();
+        break;
+      case 'boc':
+        properties = await scraper.scrapeBOCDatabaseWithAI();
+        break;
+      default:
+        return res.status(400).json({ error: 'Invalid source. Use: oahure, foreclosure, or boc' });
+    }
+
+    res.json({
+      message: `AI scraper test completed for ${source}`,
+      properties_found: properties.length,
+      properties: properties.slice(0, 5), // Return first 5 for preview
+      source: source
+    });
+
+  } catch (error) {
+    console.error(`Error testing AI scraper for ${req.params.source}:`, error);
+    res.status(500).json({ 
+      error: 'Failed to test AI scraper',
       details: error.message 
     });
   }
