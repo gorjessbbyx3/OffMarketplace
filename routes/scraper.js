@@ -458,6 +458,25 @@ Focus on Hawaii real estate market conditions, tourism impact, and off-market op
 
 // Fallback analysis when AI is unavailable
 function fallbackAnalysis(property) {
+  return {
+    ...property,
+    ai_analysis: {
+      investment_score: Math.floor(Math.random() * 100),
+      estimated_roi: '8-12%',
+      market_trends: 'Stable Hawaii market',
+      risk_factors: ['Market volatility', 'Tourism dependency'],
+      opportunity_score: Math.floor(Math.random() * 100),
+      ai_insights: 'AI analysis temporarily unavailable - using fallback assessment',
+      off_market_potential: 'Medium',
+      analyzed_by: 'Fallback System',
+      model: 'fallback'
+    },
+    analyzed_at: new Date().toISOString()
+  };
+}
+
+module.exports = router;
+function fallbackAnalysis(property) {
   const analysis = {
     investment_score: Math.floor(Math.random() * 100),
     estimated_roi: (Math.random() * 15 + 2).toFixed(1),
