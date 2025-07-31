@@ -52,6 +52,39 @@ args = "npm install"
 task = "shell.exec"
 args = "node server.js"
 
+[[workflows.workflow]]
+name = "Debug Server"
+author = 45713853
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node --version"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm --version"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"Environment check:\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"NODE_ENV: $NODE_ENV\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"PORT: $PORT\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node server.js"
+
 [[ports]]
 localPort = 5000
 externalPort = 80

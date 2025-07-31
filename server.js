@@ -37,4 +37,9 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
+}).on('error', (err) => {
+  console.error('Server failed to start:', err);
+  if (err.code === 'EADDRINUSE') {
+    console.log(`Port ${PORT} is already in use. Trying port ${PORT + 1}...`);
+  }
 });

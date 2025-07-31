@@ -390,7 +390,8 @@ async function generateAILeads() {
         dashboard.updateStats();
 
     } catch (error) {
-        console.error('Error generating leads:', error);
+        console.error('Error generating leads:', error.message || error);
+        console.error('Full error details:', error);
         dashboard.addMessage('Database search had issues, let me search the web for current opportunities...', 'ai');
 
         // Fallback to web search

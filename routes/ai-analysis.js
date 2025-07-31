@@ -158,7 +158,14 @@ router.get('/off-market-opportunities', async (req, res) => {
 // Specialized search for Kakaako apartments in pre-foreclosure
 router.post('/find-kakaako-apartment', async (req, res) => {
   try {
-    const groqClient = new GroqClient();
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({ 
+        error: 'GROQ_API_KEY not configured',
+        message: 'Please set your GROQ_API_KEY in environment variables'
+      });
+    }
+    
+    const groqClient = new GroqClient();roqClient();
 
     // First check database for existing matches
     const dbResult = await client.execute({

@@ -1,8 +1,19 @@
 const { createClient } = require('@libsql/client');
+require('dotenv').config();
+
+if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
+  console.error('Missing required environment variables: TURSO_DATABASE_URL and TURSO_AUTH_TOKEN');
+  console.log('Please check your .env file or set these environment variables');
+}
 
 const client = createClient({
-  url: process.env.TURSO_DATABASE_URL || 'libsql://roomrover-turso-vercel-icfg-ap5eqpbt7utbn3gisakslqcg.aws-us-east-1.turso.io',
-  authToken: process.env.TURSO_AUTH_TOKEN
+  url: process.env.TURSO_DATABASE_URL || 'file:local.db',
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
+
+// Test connection
+client.execute('SELECT 1').catch(err => {
+  console.error('Database connection failed:', err.message);
 });
 
 // Initialize database tables
