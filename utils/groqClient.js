@@ -132,6 +132,77 @@ Provide insights on market trends and hidden opportunities.
     return relevantLines.join(' ').trim() || `${keyword} analysis pending`;
   }
 
+  async findSpecificProperty(searchCriteria) {
+    try {
+      const prompt = `
+I need you to help find a specific property in Hawaii with these exact criteria:
+
+Location: ${searchCriteria.location}
+Property Type: ${searchCriteria.property_type}
+Price Range: ${searchCriteria.price_range}
+Status: ${searchCriteria.status}
+
+Specific Request: ${searchCriteria.specific_request}
+
+Based on your knowledge of Hawaii real estate market, Kakaako neighborhood, and typical pre-foreclosure properties, please provide:
+
+1. Potential addresses or building names that might match these criteria
+2. Typical characteristics of 4-unit apartments in Kakaako
+3. Expected price ranges for pre-foreclosure properties in this area
+4. Recommended sources to check for such listings
+5. Market analysis for this specific type of property in Kakaako
+6. Any known developments or buildings that might have units matching this description
+
+Please be as specific as possible with addresses, street names, or building complexes that could match these criteria.
+`;
+
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "You are a Hawaii real estate expert with deep knowledge of Kakaako properties, pre-foreclosure listings, and multi-unit apartment buildings. Provide specific, actionable information about properties that match the user's criteria."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.1,
+        max_tokens: 2048,
+      });
+
+      return completion.choices[0]?.message?.content || 'No specific matches found';
+
+    } catch (error) {
+      console.error('GROQ specific property search error:', error);
+      return this.getFallbackPropertySearch(searchCriteria);
+    }
+  }
+
+  getFallbackPropertySearch(criteria) {
+    return `
+Fallback search results for ${criteria.location}:
+
+Potential Areas to Check:
+- 1200-1400 Ala Moana Boulevard (Kakaako waterfront)
+- 600-800 Ala Moana Boulevard area
+- Keeaumoku Street corridor
+- Queen Street developments
+
+Recommended Actions:
+1. Check foreclosure.com for Kakaako listings
+2. Search Hawaii BOC database for properties in 96813 zip code
+3. Contact local real estate agents specializing in Kakaako
+4. Monitor auction sites for multi-unit properties
+
+Market Notes:
+- Kakaako 4-unit buildings typically range $1.8M-$2.5M
+- Pre-foreclosure opportunities are rare but valuable
+- Consider properties slightly outside exact criteria for better options
+`;
+  }
+
   getFallbackAnalysis(property) {
     let score = 5;
     const opportunities = [];

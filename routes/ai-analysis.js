@@ -122,4 +122,51 @@ router.get('/off-market-opportunities', async (req, res) => {
   }
 });
 
+// Specialized search for Kakaako apartments in pre-foreclosure
+router.post('/find-kakaako-apartment', async (req, res) => {
+  try {
+    const groqClient = new GroqClient();
+    
+    // First check database for existing matches
+    const dbResult = await client.execute({
+      sql: `SELECT * FROM properties 
+            WHERE (address LIKE '%Kakaako%' OR address LIKE '%Kaka%ako%' OR zip = '96813')
+            AND units >= 4 
+            AND price BETWEEN 1500000 AND 2500000
+            AND (distress_status LIKE '%foreclosure%' OR distress_status LIKE '%Foreclosure%')
+            ORDER BY price ASC`,
+      args: []
+    });
+
+    // Use GROQ AI to search for specific Kakaako 4-unit apartment in pre-foreclosure
+    const aiSearchResult = await groqClient.findSpecificProperty({
+      location: 'Kakaako, Honolulu, Hawaii',
+      property_type: '4-unit apartment',
+      price_range: '$1.8M - $2.2M',
+      status: 'pre-foreclosure',
+      specific_request: 'Find the exact address of a 4-unit apartment building in Kakaako that is in pre-foreclosure status for approximately $2 million'
+    });
+
+    res.json({
+      success: true,
+      database_matches: dbResult.rows,
+      ai_search_result: aiSearchResult,
+      search_criteria: {
+        location: 'Kakaako',
+        units: 4,
+        price_target: '$2,000,000',
+        status: 'pre-foreclosure'
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Kakaako search error:', error);
+    res.status(500).json({ 
+      error: 'Failed to search for Kakaako apartment',
+      details: error.message 
+    });
+  }
+});
+
 module.exports = router;
