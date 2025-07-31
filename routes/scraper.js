@@ -151,6 +151,7 @@ router.post('/scrape-hawaii', async (req, res) => {
     }
 
     res.json({
+      success: true,
       message: `Successfully scraped and saved ${insertCount} new properties`,
       total_scraped: properties.length,
       new_properties: insertCount,
@@ -161,6 +162,7 @@ router.post('/scrape-hawaii', async (req, res) => {
   } catch (error) {
     console.error('Error in scraping route:', error);
     res.status(500).json({ 
+      success: false,
       error: 'Failed to scrape properties',
       details: error.message 
     });

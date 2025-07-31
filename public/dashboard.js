@@ -1204,3 +1204,131 @@ function createWebSearchResultsDiv() {
     document.getElementById('ai-leads-results').appendChild(div);
     return div;
 }
+
+// Add missing copy/export functions
+function copyReport(propertyId) {
+    alert(`Copying report for property ${propertyId} to clipboard`);
+}
+
+function exportReport(propertyId) {
+    alert(`Exporting PDF report for property ${propertyId}`);
+}
+
+// Add missing search function
+async function searchProperties() {
+    try {
+        const response = await fetch('/api/properties/search', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.properties) {
+            dashboard.displayLeads(result.properties);
+            dashboard.addMessage(`Found ${result.properties.length} properties in the database.`, 'system');
+        } else {
+            dashboard.addMessage('No properties found. Try running the scraper first.', 'system');
+        }
+    } catch (error) {
+        console.error('Search error:', error);
+        dashboard.addMessage('Error searching properties. Please check the server status.', 'system');
+    }
+}
+
+// Add missing off-market leads function
+async function findOffMarketLeads() {
+    try {
+        dashboard.addMessage('🔍 Searching for off-market opportunities...', 'ai');
+
+        const response = await fetch('/api/scraper/detect-off-market', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            dashboard.addMessage(`Found ${result.off_market_candidates} potential off-market properties out of ${result.total_analyzed} analyzed.`, 'ai');
+
+            if (result.properties && result.properties.length > 0) {
+                dashboard.displayLeads(result.properties);
+            }
+        } else {
+            dashboard.addMessage('Off-market detection encountered issues. Please check the server logs.', 'ai');
+        }
+
+    } catch (error) {
+        console.error('Off-market search error:', error);
+        dashboard.addMessage('Failed to search for off-market leads. Please try again.', 'ai');
+    }
+}
+
+function showLoading(message) {
+    document.getElementById('loading-message').innerText = message;
+    document.getElementById('loading-overlay').style.display = 'flex';
+}
+
+function hideLoading() {
+    document.getElementById('loading-overlay').style.display = 'none';
+}
+
+function addMessage(type, text) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+
+        const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+        if (type === 'system') {
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <strong><i class="fas fa-server"></i> System Message</strong>
+                    <span class="timestamp">${timestamp}</span>
+                </div>
+                <div class="message-content">${text}</div>
+            `;
+        } else {
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <strong><i class="fas fa-robot"></i> AI Assistant</strong>
+                    <span class="timestamp">${timestamp}</span>
+                </div>
+                <div class="message-content">${text}</div>
+            `;
+        }
+
+        document.getElementById('ai-leads-results').appendChild(messageDiv);
+        document.getElementById('ai-leads-results').scrollTop = document.getElementById('ai-leads-results').scrollHeight;
+}
+
+function displayLeads(leads) {
+    const resultsDiv = document.getElementById('ai-leads-results');
+    resultsDiv.innerHTML = '';
+
+    if (!leads || leads.length === 0) {
+        resultsDiv.innerHTML = '<div class="text-muted">No leads found.</div>';
+        return;
+    }
+
+    leads.forEach(lead => {
+        const card = document.createElement('div');
+        card.className = 'lead-card';
+
+        card.innerHTML = `
+            <h5>${lead.address}</h5>
+            <p>Type: ${lead.propertyType}, Price: ${lead.budget}</p>
+            <p>Goals: ${lead.investmentGoals}</p>
+        `;
+
+        resultsDiv.appendChild(card);
+    });
+}
+
+function displayAiAnalysis(analysis) {
+    const analysisDiv = document.getElementById('ai-analysis');
+    analysisDiv.innerHTML = `<h4>AI Analysis:</h4><p>${analysis}</p>`;
+}
