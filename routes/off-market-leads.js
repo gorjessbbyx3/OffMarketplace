@@ -101,10 +101,11 @@ router.post('/find-off-market-leads', async (req, res) => {
   }
 });
 
-// Analyze individual property for off-market potential
+// Analyze individual property for off-market potential with focus on tax delinquency and pre-foreclosure
 async function analyzeOffMarketPotential(property) {
   try {
-    const prompt = `Analyze this Hawaii property for off-market potential and comprehensive investment opportunity:
+    // Enhanced analysis specifically targeting tax delinquency and pre-foreclosure indicators
+    const prompt = `PRIORITY ANALYSIS: Hawaii Property Tax Delinquency & Pre-Foreclosure Assessment
 
 Property Details:
 - Address: ${property.address}
@@ -115,80 +116,91 @@ Property Details:
 - Status: ${property.distress_status}
 - Source: ${property.source}
 - Listed Date: ${property.created_at}
+- Owner: ${property.owner_name || 'Unknown'}
 
-Analyze for OFF-MARKET POTENTIAL based on:
+FOCUS ANALYSIS - HIGH PRIORITY DISTRESS INDICATORS:
 
-1. DISTRESS INDICATORS:
-   - Foreclosure status, liens, legal notices
-   - Estate sales, divorce proceedings
-   - Tax delinquency, code violations
+1. TAX DELINQUENCY ANALYSIS:
+   - Property tax payment history patterns
+   - Outstanding tax liens or arrearages
+   - Multiple years of unpaid taxes
+   - Tax certificate sale eligibility
+   - Assessment vs payment discrepancies
+   - Recent tax assessment increases
+   - Owner's financial inability to pay taxes
 
-2. TENANT REVENUE POTENTIAL:
-   - Current rental income (if occupied)
-   - Market rent potential per unit
-   - Vacancy rates and rental demand
-   - Short-term vs long-term rental viability
+2. PRE-FORECLOSURE INDICATORS:
+   - Notice of Default (NOD) filings
+   - Lis Pendens court filings
+   - Trustee sale notifications
+   - Power of sale proceedings
+   - Mortgage payment delinquency signals
+   - Lender acceleration notices
+   - Foreclosure timeline positioning
 
-3. LEASE STRUCTURE ANALYSIS:
-   - Fee simple vs leasehold indicators
-   - Ground lease terms and expiration
-   - Existing tenant lease details
-   - Rent control implications
+3. FINANCIAL DISTRESS SIGNALS:
+   - Multiple liens (tax, mechanics, judgment)
+   - Bankruptcy filings by owner
+   - Divorce proceedings affecting property
+   - Estate/probate situations
+   - Code violation fines unpaid
+   - Utility shutoff notices
+   - Insurance policy lapses
 
-4. PROPERTY CONDITION ASSESSMENT:
-   - Move-in ready vs renovation needed
-   - Fix and flip potential vs buy-and-hold
-   - Deferred maintenance indicators
-   - Furnished vs unfurnished condition
+4. HAWAII-SPECIFIC DISTRESS FACTORS:
+   - Leasehold ground rent delinquency
+   - AOAO (condo association) fees unpaid
+   - State/County citation violations
+   - TMK (Tax Map Key) issues
+   - Zoning violation penalties
+   - Building permit violations
 
-5. PRICING SIGNALS:
-   - Below market value indicators
-   - Price per square foot analysis
-   - Rapid price reductions
-   - Unusual pricing patterns
+5. OWNER MOTIVATION ASSESSMENT:
+   - Absentee ownership patterns
+   - Out-of-state ownership complications
+   - Elderly owner estate planning needs
+   - Corporate ownership financial stress
+   - Multiple property ownership strain
 
-6. SELLER MOTIVATION:
-   - Time on market patterns
-   - Multiple listing attempts
-   - Financial distress signals
+6. ACQUISITION OPPORTUNITY SCORING:
+   - Days until foreclosure auction
+   - Total debt vs property value
+   - Minimum bid requirements
+   - Redemption period implications
+   - Competition level assessment
+   - Clear title potential
 
-7. SOURCE RELIABILITY:
-   - Data source credibility and freshness
-   - Information completeness
-   - Verification status
-
-Provide JSON response:
+Provide detailed JSON response focusing on distressed acquisition opportunities:
 {
   "off_market_score": 0-100,
-  "reasoning": "detailed analysis",
-  "indicators": ["specific signals found"],
-  "motivation_signals": ["seller motivation factors"],
-  "tenant_revenue_analysis": {
-    "estimated_monthly_rent": "per unit",
-    "annual_rental_income": "total",
-    "rental_strategy": "short-term|long-term|hybrid"
+  "tax_delinquency_analysis": {
+    "delinquency_probability": "high|medium|low",
+    "estimated_back_taxes": "dollar amount or range",
+    "tax_sale_eligible": "yes|no|pending",
+    "delinquency_indicators": ["specific tax issues found"]
   },
-  "lease_analysis": {
-    "tenure_type": "fee_simple|leasehold|unknown",
-    "lease_expiration": "date or N/A",
-    "ground_rent": "monthly amount or N/A"
+  "pre_foreclosure_analysis": {
+    "foreclosure_stage": "pre_nod|nod_filed|auction_scheduled|redemption_period",
+    "estimated_days_to_auction": "number or N/A",
+    "total_debt_estimate": "dollar amount",
+    "minimum_bid_estimate": "dollar amount",
+    "foreclosure_indicators": ["specific pre-foreclosure signals"]
   },
-  "condition_assessment": {
-    "property_condition": "move_in_ready|needs_renovation|major_rehab",
-    "investment_strategy": "flip|hold|value_add",
-    "renovation_estimate": "cost range",
-    "furnished_status": "furnished|unfurnished|partially_furnished"
+  "financial_distress_score": 0-100,
+  "distress_indicators": ["specific distress signals found"],
+  "owner_motivation_factors": ["compelling reasons to sell"],
+  "acquisition_strategy": {
+    "approach_method": "pre_foreclosure_contact|tax_sale|auction_bid|direct_offer",
+    "timing_urgency": "immediate|30_days|60_days|monitor",
+    "estimated_acquisition_cost": "total investment needed",
+    "potential_equity_capture": "percentage below market value"
   },
-  "source_reliability": {
-    "credibility_score": 0-10,
-    "data_freshness": "current|outdated|unknown",
-    "verification_needed": ["items to verify"]
-  },
-  "urgency": "critical|high|medium|low",
-  "estimated_discount": "percentage below market",
-  "contact_strategy": "recommended approach",
-  "action_items": ["specific next steps"],
-  "lead_quality": "A|B|C|D"
+  "due_diligence_priorities": ["critical items to verify immediately"],
+  "contact_timeline": "call_today|this_week|this_month",
+  "lead_quality": "A+|A|B|C|D",
+  "expected_discount": "percentage range",
+  "risk_factors": ["potential deal complications"],
+  "action_items": ["immediate next steps prioritized"]
 }`;
 
     const response = await groqClient.analyzeWithGroq(prompt);
@@ -213,79 +225,197 @@ Provide JSON response:
   }
 }
 
-// Rule-based scoring enhancement
+// Enhanced rule-based scoring focused on tax delinquency and pre-foreclosure
 function enhanceWithRuleBasedScoring(property, analysis) {
   let bonusScore = 0;
   const additionalIndicators = [];
+  const taxDelinquencySignals = [];
+  const preForeclosureSignals = [];
 
-  // Distress status bonus
+  // HIGH PRIORITY: Active foreclosure proceedings
   if (property.distress_status === 'Foreclosure') {
-    bonusScore += 25;
-    additionalIndicators.push('Active foreclosure proceedings');
+    bonusScore += 35;
+    preForeclosureSignals.push('Active foreclosure - immediate opportunity');
+    additionalIndicators.push('🚨 FORECLOSURE ACTIVE - High Priority Lead');
   } else if (property.distress_status === 'Pre-foreclosure') {
+    bonusScore += 30;
+    preForeclosureSignals.push('Pre-foreclosure status - early intervention opportunity');
+    additionalIndicators.push('⚠️ PRE-FORECLOSURE - Time-Sensitive Lead');
+  }
+
+  // TAX DELINQUENCY INDICATORS
+  const propertyDetails = (property.details || '').toLowerCase();
+  const propertySource = (property.source || '').toLowerCase();
+  
+  // Check for tax-related keywords in details
+  if (propertyDetails.includes('tax') && (propertyDetails.includes('delinquent') || propertyDetails.includes('lien'))) {
+    bonusScore += 25;
+    taxDelinquencySignals.push('Tax delinquency mentioned in property details');
+    additionalIndicators.push('💰 TAX DELINQUENCY DETECTED');
+  }
+
+  // Check for legal notice sources (high indicator of tax issues)
+  if (propertySource.includes('legal notice') || propertySource.includes('star advertiser')) {
     bonusScore += 20;
-    additionalIndicators.push('Pre-foreclosure status');
+    taxDelinquencySignals.push('Legal notice publication - often tax sale related');
+    additionalIndicators.push('📰 LEGAL NOTICE SOURCE - Tax Sale Potential');
   }
 
-  // Source reliability bonus
-  if (property.source?.includes('Legal Notices')) {
+  // County records often contain tax information
+  if (propertySource.includes('county') || propertySource.includes('honolulu')) {
     bonusScore += 15;
-    additionalIndicators.push('Official legal notice publication');
+    taxDelinquencySignals.push('County record source - tax payment history available');
+    additionalIndicators.push('🏛️ COUNTY RECORD - Verify Tax Status');
   }
 
-  // Price analysis
-  if (property.price < 400000) {
+  // Check for estate/probate situations (often lead to tax issues)
+  if (propertyDetails.includes('estate') || propertyDetails.includes('probate') || propertyDetails.includes('deceased')) {
+    bonusScore += 20;
+    taxDelinquencySignals.push('Estate/probate situation - potential tax complications');
+    additionalIndicators.push('👨‍⚖️ ESTATE/PROBATE - Tax Issues Likely');
+  }
+
+  // Absentee ownership indicators (often leads to tax delinquency)
+  if (property.owner_name && property.owner_name.includes('LLC') || property.owner_name.includes('Trust')) {
     bonusScore += 10;
-    additionalIndicators.push('Below median Hawaii price point');
+    taxDelinquencySignals.push('Corporate/trust ownership - potential management issues');
+    additionalIndicators.push('🏢 CORPORATE OWNERSHIP - Verify Tax Payments');
   }
 
-  // Recent listing bonus
+  // Age of listing (older listings may indicate distress)
   const daysOld = (new Date() - new Date(property.created_at)) / (1000 * 60 * 60 * 24);
-  if (daysOld < 7) {
-    bonusScore += 5;
-    additionalIndicators.push('Recently discovered opportunity');
+  if (daysOld > 90) {
+    bonusScore += 15;
+    additionalIndicators.push('📅 STALE LISTING - Motivated Seller Likely');
+  } else if (daysOld < 7) {
+    bonusScore += 10;
+    additionalIndicators.push('🆕 FRESH OPPORTUNITY - Act Quickly');
   }
 
-  // Update analysis
+  // Price analysis for distressed pricing
+  if (property.price < 300000) {
+    bonusScore += 20;
+    additionalIndicators.push('💸 BELOW MARKET PRICE - Distress Sale Indicator');
+  } else if (property.price < 500000) {
+    bonusScore += 15;
+    additionalIndicators.push('💵 COMPETITIVE PRICING - Good Value Opportunity');
+  }
+
+  // Multiple distress factors compound the opportunity
+  const distressFactorCount = preForeclosureSignals.length + taxDelinquencySignals.length;
+  if (distressFactorCount >= 2) {
+    bonusScore += 15;
+    additionalIndicators.push('🎯 MULTIPLE DISTRESS FACTORS - Prime Opportunity');
+  }
+
+  // Update analysis with enhanced scoring
   analysis.off_market_score = Math.min(100, analysis.off_market_score + bonusScore);
   analysis.indicators = [...(analysis.indicators || []), ...additionalIndicators];
+  analysis.tax_delinquency_signals = taxDelinquencySignals;
+  analysis.pre_foreclosure_signals = preForeclosureSignals;
+
+  // Set urgency based on foreclosure status
+  if (property.distress_status === 'Foreclosure') {
+    analysis.urgency = 'critical';
+  } else if (property.distress_status === 'Pre-foreclosure' || taxDelinquencySignals.length > 0) {
+    analysis.urgency = 'high';
+  } else if (analysis.off_market_score > 70) {
+    analysis.urgency = 'medium';
+  }
 
   return analysis;
 }
 
-// Fallback analysis when AI is unavailable
+// Enhanced fallback analysis focused on tax delinquency and pre-foreclosure indicators
 function generateFallbackAnalysis(property) {
-  let score = 50;
+  let score = 40;
   const indicators = [];
   const motivationSignals = [];
+  const actionItems = [];
 
+  // High priority distress indicators
   if (property.distress_status === 'Foreclosure') {
-    score += 30;
-    indicators.push('Foreclosure status');
-    motivationSignals.push('Forced sale situation');
+    score += 40;
+    indicators.push('🚨 ACTIVE FORECLOSURE - Immediate Action Required');
+    motivationSignals.push('Court-ordered sale - must sell');
+    actionItems.push('Research foreclosure auction date immediately');
+    actionItems.push('Contact trustee or foreclosure attorney');
+  } else if (property.distress_status === 'Pre-foreclosure') {
+    score += 35;
+    indicators.push('⚠️ PRE-FORECLOSURE - Time-Sensitive Opportunity');
+    motivationSignals.push('Mortgage default - facing foreclosure');
+    actionItems.push('Contact owner before auction notice');
   }
 
-  if (property.price < 500000) {
-    score += 15;
-    indicators.push('Below median market price');
+  // Tax delinquency indicators
+  const details = (property.details || '').toLowerCase();
+  const source = (property.source || '').toLowerCase();
+
+  if (details.includes('tax') || source.includes('legal notice')) {
+    score += 25;
+    indicators.push('💰 POTENTIAL TAX ISSUES');
+    motivationSignals.push('Tax payment difficulties');
+    actionItems.push('Verify property tax payment status');
+    actionItems.push('Check for tax liens at County of Honolulu');
   }
 
-  if (property.source?.includes('Legal')) {
+  if (source.includes('county') || source.includes('honolulu')) {
     score += 20;
-    indicators.push('Legal notice source');
-    motivationSignals.push('Court-ordered sale');
+    indicators.push('🏛️ COUNTY RECORD - Tax Data Available');
+    actionItems.push('Pull complete tax payment history');
   }
+
+  // Estate/probate situations (high tax delinquency correlation)
+  if (details.includes('estate') || details.includes('probate')) {
+    score += 25;
+    indicators.push('👨‍⚖️ ESTATE/PROBATE - Tax Complications Likely');
+    motivationSignals.push('Estate settlement pressure');
+    actionItems.push('Contact probate attorney or executor');
+    actionItems.push('Verify estate tax obligations');
+  }
+
+  // Price indicators
+  if (property.price < 400000) {
+    score += 20;
+    indicators.push('💸 BELOW MARKET PRICING - Distress Sale');
+    motivationSignals.push('Financial pressure for quick sale');
+  }
+
+  // Determine contact strategy based on distress level
+  let contactStrategy = 'Research property background first';
+  if (property.distress_status === 'Foreclosure') {
+    contactStrategy = 'URGENT: Contact within 24-48 hours';
+  } else if (score > 70) {
+    contactStrategy = 'Priority contact within 1 week';
+  }
+
+  // Enhanced action items for tax-focused analysis
+  actionItems.push('Search Hawaii Bureau of Conveyances for liens');
+  actionItems.push('Check TMK tax records at honolulu.gov');
+  actionItems.push('Verify ownership through county assessor');
 
   return {
-    off_market_score: score,
-    reasoning: 'Basic analysis - AI unavailable',
+    off_market_score: Math.min(score, 100),
+    reasoning: 'Tax delinquency & pre-foreclosure focused analysis',
     indicators: indicators,
     motivation_signals: motivationSignals,
-    urgency: score > 80 ? 'high' : score > 60 ? 'medium' : 'low',
-    estimated_discount: score > 70 ? '15-25%' : '5-15%',
-    contact_strategy: 'Direct owner contact recommended',
-    action_items: ['Research property history', 'Contact owner/agent', 'Verify distress status'],
-    lead_quality: score > 80 ? 'A' : score > 65 ? 'B' : 'C'
+    tax_delinquency_analysis: {
+      delinquency_probability: score > 70 ? 'high' : score > 50 ? 'medium' : 'low',
+      estimated_back_taxes: 'Requires county lookup',
+      tax_sale_eligible: 'Verify with county',
+      delinquency_indicators: indicators.filter(i => i.includes('TAX') || i.includes('COUNTY'))
+    },
+    pre_foreclosure_analysis: {
+      foreclosure_stage: property.distress_status === 'Foreclosure' ? 'auction_scheduled' : 
+                         property.distress_status === 'Pre-foreclosure' ? 'nod_filed' : 'unknown',
+      estimated_days_to_auction: property.distress_status === 'Foreclosure' ? '30-90 days' : 'N/A',
+      foreclosure_indicators: indicators.filter(i => i.includes('FORECLOSURE'))
+    },
+    urgency: score > 85 ? 'critical' : score > 70 ? 'high' : score > 55 ? 'medium' : 'low',
+    estimated_discount: score > 80 ? '20-40%' : score > 65 ? '15-25%' : '5-15%',
+    contact_strategy: contactStrategy,
+    action_items: actionItems,
+    lead_quality: score > 85 ? 'A+' : score > 75 ? 'A' : score > 60 ? 'B' : 'C'
   };
 }
 

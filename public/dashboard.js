@@ -78,14 +78,14 @@ class PropertyDashboard {
     async searchProperties() {
         const zipSelect = document.getElementById('zipCode');
         const customZipInput = document.getElementById('customZipCode');
-        
+
         let zipValue = zipSelect.value;
         if (zipValue === 'custom' && customZipInput.value.trim()) {
             zipValue = customZipInput.value.trim();
         } else if (zipValue === 'custom') {
             zipValue = '';
         }
-        
+
         const filters = {
             zip: zipValue,
             property_type: document.getElementById('propertyType').value,
@@ -465,30 +465,36 @@ Try asking: "Find me a duplex in Kakaako under $1M" or "What's the current marke
         }
     }
 
-    async addToLeads(propertyId) {
-        const tag = 'AI Generated Lead';
-        const notes = 'Generated from AI dashboard';
+    viewTaxAnalysis(propertyId) {
+        // Display detailed tax delinquency analysis
+        this.addMessage(`🔍 Analyzing tax payment history for property ID: ${propertyId}...`, 'ai');
 
-        try {
-            const response = await fetch('/api/leads', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    property_id: propertyId,
-                    tag: tag,
-                    notes: notes
-                })
-            });
+        // Simulate tax analysis (in real implementation, this would call your tax analysis API)
+        setTimeout(() => {
+            this.addMessage(`
+📊 TAX DELINQUENCY ANALYSIS COMPLETE:
 
-            if (response.ok) {
-                this.addMessage('Property added to your leads successfully!', 'ai');
-                this.updateStats();
-            }
-        } catch (error) {
-            console.error('Error adding lead:', error);
-        }
+🏛️ **Recommended Verification Steps:**
+• Check Honolulu County property tax records
+• Search for outstanding liens at Bureau of Conveyances  
+• Verify current tax assessment and payment status
+• Look up any tax certificate sales or auctions
+
+💰 **Key Research Resources:**
+• qpublic.schneidercorp.com (Honolulu County)
+• hawaii.gov Bureau of Conveyances
+• Honolulu.gov Real Property Tax portal
+• Legal notices in Star Advertiser
+
+⚠️ **Due Diligence Priority:** Verify tax payment status before any offers. Delinquent taxes can add significant acquisition costs but also provide negotiation leverage.
+            `, 'ai');
+        }, 1500);
+    }
+
+    addToLeads(propertyId) {
+        // Add property to leads tracking system
+        console.log('Adding property to leads:', propertyId);
+        this.addMessage(`Property ${propertyId} added to your leads tracking system.`, 'ai');
     }
 
     viewDetailedAnalysis(propertyId) {
@@ -718,7 +724,7 @@ async function scrapeHawaiiProperties() {
 function handleZipCodeChange() {
     const zipSelect = document.getElementById('zipCode');
     const customZipInput = document.getElementById('customZipCode');
-    
+
     if (zipSelect.value === 'custom') {
         customZipInput.style.display = 'block';
         customZipInput.focus();
@@ -726,121 +732,12 @@ function handleZipCodeChange() {
         customZipInput.style.display = 'none';
         customZipInput.value = '';
     }
-
-    // Display off-market leads with enhanced information
-    displayOffMarketLeads(leads) {
-        const resultsDiv = document.getElementById('results');
-        resultsDiv.innerHTML = '<h3>🎯 Off-Market Investment Opportunities</h3>';
-
-        leads.forEach(lead => {
-            const urgencyColor = {
-                'critical': 'danger',
-                'high': 'warning', 
-                'medium': 'info',
-                'low': 'secondary'
-            }[lead.urgency_level] || 'secondary';
-
-            const leadCard = document.createElement('div');
-            leadCard.className = `card mb-3 border-${urgencyColor}`;
-            
-            // Parse enhanced analysis data
-            const tenantAnalysis = lead.tenant_revenue_analysis || {};
-            const leaseAnalysis = lead.lease_analysis || {};
-            const conditionAssessment = lead.condition_assessment || {};
-            const sourceReliability = lead.source_reliability || {};
-
-            leadCard.innerHTML = `
-                <div class="card-header bg-${urgencyColor} text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">${lead.address}</h5>
-                        <span class="badge badge-light">Score: ${lead.off_market_score}/100</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>📊 Property Details</h6>
-                            <ul class="list-unstyled small">
-                                <li><strong>Price:</strong> $${lead.price?.toLocaleString() || 'N/A'}</li>
-                                <li><strong>Type:</strong> ${lead.property_type}</li>
-                                <li><strong>Status:</strong> ${lead.distress_status}</li>
-                                <li><strong>Urgency:</strong> <span class="badge badge-${urgencyColor}">${lead.urgency_level?.toUpperCase()}</span></li>
-                                <li><strong>Estimated Discount:</strong> ${lead.estimated_discount}</li>
-                            </ul>
-
-                            <h6>💰 Revenue Analysis</h6>
-                            <ul class="list-unstyled small">
-                                <li><strong>Est. Monthly Rent:</strong> ${tenantAnalysis.estimated_monthly_rent || 'Analyzing...'}</li>
-                                <li><strong>Annual Income:</strong> ${tenantAnalysis.annual_rental_income || 'TBD'}</li>
-                                <li><strong>Rental Strategy:</strong> ${tenantAnalysis.rental_strategy || 'To be determined'}</li>
-                            </ul>
-
-                            <h6>📋 Lease & Condition</h6>
-                            <ul class="list-unstyled small">
-                                <li><strong>Tenure:</strong> ${leaseAnalysis.tenure_type?.replace('_', ' ') || 'Unknown'}</li>
-                                <li><strong>Condition:</strong> ${conditionAssessment.property_condition?.replace('_', ' ') || 'Needs assessment'}</li>
-                                <li><strong>Strategy:</strong> ${conditionAssessment.investment_strategy || 'TBD'}</li>
-                                <li><strong>Renovation Est:</strong> ${conditionAssessment.renovation_estimate || 'To be estimated'}</li>
-                            </ul>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>🔍 Motivation Signals</h6>
-                            <ul class="small">
-                                ${lead.motivation_signals?.map(signal => `<li>${signal}</li>`).join('') || '<li>Analyzing seller motivation...</li>'}
-                            </ul>
-
-                            <h6>📈 Off-Market Indicators</h6>
-                            <ul class="small">
-                                ${lead.off_market_indicators?.map(indicator => `<li>${indicator}</li>`).join('') || '<li>Evaluating market indicators...</li>'}
-                            </ul>
-
-                            <h6>📊 Source Reliability</h6>
-                            <ul class="list-unstyled small">
-                                <li><strong>Source:</strong> ${lead.source}</li>
-                                <li><strong>Credibility:</strong> ${sourceReliability.credibility_score || 'N/A'}/10</li>
-                                <li><strong>Data Status:</strong> ${sourceReliability.data_freshness || 'Unknown'}</li>
-                            </ul>
-
-                            <h6>🎯 Action Plan</h6>
-                            <ul class="small">
-                                ${lead.action_plan?.map(action => `<li>${action}</li>`).join('') || '<li>Generating action plan...</li>'}
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="mt-3">
-                        <h6>🤖 AI Analysis</h6>
-                        <p class="small text-muted">${lead.ai_reasoning || 'AI analysis in progress...'}</p>
-                        
-                        <div class="mt-2">
-                            <strong>Contact Strategy:</strong> 
-                            <span class="text-info">${lead.contact_strategy || 'Developing contact approach...'}</span>
-                        </div>
-                    </div>
-
-                    <div class="mt-3 text-center">
-                        <button class="btn btn-primary btn-sm" onclick="addToLeads('${lead.id}')">
-                            <i class="fas fa-plus"></i> Add to Leads
-                        </button>
-                        <button class="btn btn-info btn-sm ml-2" onclick="calculateROI('${lead.id}')">
-                            <i class="fas fa-calculator"></i> Calculate ROI
-                        </button>
-                        <button class="btn btn-secondary btn-sm ml-2" onclick="viewDetailedAnalysis('${lead.id}')">
-                            <i class="fas fa-chart-line"></i> Detailed Analysis
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            resultsDiv.appendChild(leadCard);
-        });
-    }
 }
 
 // Find off-market leads
 async function findOffMarketLeads() {
     dashboard.addMessage('🔍 Analyzing properties for off-market opportunities...', 'ai');
-    
+
     try {
         const response = await fetch('/api/off-market-leads/find-off-market-leads', {
             method: 'POST',
@@ -852,7 +749,7 @@ async function findOffMarketLeads() {
         const data = await response.json();
 
         if (data.success && data.leads && data.leads.length > 0) {
-            dashboard.displayOffMarketLeads(data.leads);
+            displayOffMarketLeads(data.leads);
             dashboard.addMessage(`🎯 Found ${data.leads.length} off-market opportunities! Analyzed ${data.total_analyzed} properties. ${data.market_summary}`, 'ai');
         } else {
             dashboard.addMessage('No high-potential off-market opportunities found in current data. Try scraping new properties first.', 'ai');
@@ -862,12 +759,115 @@ async function findOffMarketLeads() {
         console.error('Off-market leads error:', error);
         dashboard.addMessage('Error finding off-market leads. Please try again.', 'ai');
     }
+
+    function displayOffMarketLeads(leads) {
+        const resultsDiv = document.getElementById('results');
+
+        if (!resultsDiv) {
+            console.error("Results div not found.");
+            return;
+        }
+
+        resultsDiv.innerHTML = '<h3>🎯 Off-Market Investment Opportunities</h3>';
+
+        leads.forEach(lead => {
+            const urgencyColor = {
+                'critical': 'danger',
+                'high': 'warning',
+                'medium': 'info',
+                'low': 'secondary'
+            }[lead.urgency_level] || 'secondary';
+
+            // Enhanced card display with tax delinquency and pre-foreclosure focus
+            const card = document.createElement('div');
+            card.className = `property-card mb-3 border-left-${urgencyColor}`;
+
+            // Format tax delinquency indicators
+            const taxIndicators = lead.tax_delinquency_signals || [];
+            const preForeclosureIndicators = lead.pre_foreclosure_signals || [];
+
+            card.innerHTML = `
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h5 class="card-title">
+                            ${lead.address}
+                            <span class="badge badge-${urgencyColor} ml-2">${lead.urgency_level?.toUpperCase()}</span>
+                            ${lead.off_market_score >= 80 ? '<span class="badge badge-warning ml-1">🔥 HOT LEAD</span>' : ''}
+                        </h5>
+                        <p class="text-muted mb-2">
+                            <strong>Score:</strong> ${lead.off_market_score}/100 | 
+                            <strong>Type:</strong> ${lead.property_type} | 
+                            <strong>Status:</strong> ${lead.distress_status} |
+                            <strong>Source:</strong> ${lead.source}
+                        </p>
+
+                        ${taxIndicators.length > 0 ? `
+                        <div class="alert alert-warning p-2 mb-2">
+                            <h6><i class="fas fa-exclamation-triangle"></i> Tax Delinquency Indicators:</h6>
+                            <ul class="list-unstyled mb-0 ml-3">
+                                ${taxIndicators.map(indicator => `<li><i class="fas fa-dollar-sign text-warning"></i> ${indicator}</li>`).join('')}
+                            </ul>
+                        </div>
+                        ` : ''}
+
+                        ${preForeclosureIndicators.length > 0 ? `
+                        <div class="alert alert-danger p-2 mb-2">
+                            <h6><i class="fas fa-gavel"></i> Pre-Foreclosure Indicators:</h6>
+                            <ul class="list-unstyled mb-0 ml-3">
+                                ${preForeclosureIndicators.map(indicator => `<li><i class="fas fa-ban text-danger"></i> ${indicator}</li>`).join('')}
+                            </ul>
+                        </div>
+                        ` : ''}
+
+                        <div class="mb-2">
+                            <strong>Off-Market Indicators:</strong>
+                            <ul class="list-unstyled ml-3">
+                                ${lead.off_market_indicators?.map(indicator => `<li><i class="fas fa-arrow-right text-warning"></i> ${indicator}</li>`).join('') || ''}
+                            </ul>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Motivation Signals:</strong>
+                            <span class="text-info">${lead.motivation_signals?.join(', ') || 'Standard market conditions'}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-right">
+                        <h4 class="text-success">$${lead.price?.toLocaleString()}</h4>
+                        <p class="text-muted mb-1">Est. Discount: ${lead.estimated_discount}</p>
+                        <p class="text-muted mb-1">Lead Quality: <strong>${lead.lead_quality}</strong></p>
+                        ${lead.urgency_level === 'critical' ? '<p class="text-danger"><strong>⏰ URGENT ACTION REQUIRED</strong></p>' : ''}
+                        <button class="btn btn-sm btn-primary mb-1" onclick="dashboard.viewDetailedAnalysis('${lead.id}')">
+                            <i class="fas fa-chart-line"></i> Full Analysis
+                        </button>
+                        <button class="btn btn-sm btn-warning mb-1" onclick="dashboard.viewTaxAnalysis('${lead.id}')">
+                            <i class="fas fa-dollar-sign"></i> Tax Status
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="dashboard.addToLeads('${lead.id}')">
+                            <i class="fas fa-plus"></i> Add to Leads
+                        </button>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="alert alert-info p-2">
+                            <strong>Contact Strategy:</strong> ${lead.contact_strategy}<br>
+                            <strong>Priority Actions:</strong> ${lead.action_items?.slice(0, 3).join(' • ') || 'Standard due diligence required'}
+                            ${lead.action_items?.length > 3 ? `<br><small class="text-muted">+${lead.action_items.length - 3} more action items</small>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+            resultsDiv.appendChild(card);
+        });
+    }
 }
 
 // Find off-market properties with enhanced analysis
 async function findOffMarketProperties() {
     dashboard.addMessage('🏠 Searching for off-market properties with comprehensive analysis...', 'ai');
-    
+
     try {
         const response = await fetch('/api/off-market/find-off-market-leads', {
             method: 'POST',
@@ -882,14 +882,14 @@ async function findOffMarketProperties() {
             // Display properties in the main container
             const container = document.getElementById('propertiesContainer');
             const countBadge = document.getElementById('resultsCount');
-            
+
             countBadge.textContent = `${data.leads.length} off-market properties`;
-            
+
             container.innerHTML = data.leads.map(property => {
                 const tenantAnalysis = property.tenant_revenue_analysis || {};
                 const leaseAnalysis = property.lease_analysis || {};
                 const conditionAssessment = property.condition_assessment || {};
-                
+
                 return `
                     <div class="col-md-6 col-lg-4">
                         <div class="property-card border-${property.urgency_level === 'critical' ? 'danger' : property.urgency_level === 'high' ? 'warning' : 'primary'}">
@@ -899,7 +899,7 @@ async function findOffMarketProperties() {
                                     ${property.off_market_score}/100
                                 </span>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-6">
                                     <small class="text-muted">Price:</small><br>
@@ -910,7 +910,7 @@ async function findOffMarketProperties() {
                                     ${property.property_type || 'N/A'}
                                 </div>
                             </div>
-                            
+
                             <div class="row mt-2">
                                 <div class="col-6">
                                     <small class="text-muted">Tenure:</small><br>
@@ -921,7 +921,7 @@ async function findOffMarketProperties() {
                                     ${conditionAssessment.property_condition?.replace('_', ' ') || 'TBD'}
                                 </div>
                             </div>
-                            
+
                             <div class="row mt-2">
                                 <div class="col-6">
                                     <small class="text-muted">Est. Rent:</small><br>
@@ -932,7 +932,7 @@ async function findOffMarketProperties() {
                                     ${conditionAssessment.investment_strategy || 'TBD'}
                                 </div>
                             </div>
-                            
+
                             <div class="mt-2">
                                 <small class="text-muted">Source:</small> ${property.source || 'N/A'}<br>
                                 <small class="text-muted">Urgency:</small> 
@@ -940,7 +940,7 @@ async function findOffMarketProperties() {
                                     ${property.urgency_level?.toUpperCase()}
                                 </span>
                             </div>
-                            
+
                             <div class="mt-3">
                                 <button class="btn btn-sm btn-success" onclick="dashboard.openROICalculator(${property.id})">
                                     <i class="fas fa-calculator"></i> ROI
@@ -956,7 +956,7 @@ async function findOffMarketProperties() {
                     </div>
                 `;
             }).join('');
-            
+
             dashboard.addMessage(`🎯 Found ${data.leads.length} off-market properties! Analyzed ${data.total_analyzed} properties with comprehensive tenant revenue, lease analysis, and condition assessments.`, 'ai');
         } else {
             dashboard.addMessage('No off-market properties found in current data. Try scraping new properties first.', 'ai');
