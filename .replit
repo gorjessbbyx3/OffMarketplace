@@ -11,7 +11,7 @@ deploymentTarget = "gce"
 run = ["sh", "-c", "npm run dev"]
 
 [workflows]
-runButton = "Debug Server"
+runButton = "Run"
 
 [[workflows.workflow]]
 name = "Start Server"

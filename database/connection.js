@@ -6,6 +6,61 @@ if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
   console.log('Falling back to local SQLite database');
 }
 
+// Create client with fallback to local database
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL || 'file:local.db',
+  authToken: process.env.TURSO_AUTH_TOKEN || undefined,
+});
+
+// Initialize database function
+async function initDatabase() {
+  try {
+    // Create properties table if it doesn't exist
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS properties (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        address TEXT,
+        zip TEXT,
+        property_type TEXT,
+        units INTEGER,
+        sqft INTEGER,
+        price REAL,
+        zoning TEXT,
+        distress_status TEXT,
+        str_revenue REAL,
+        str_roi REAL,
+        owner_name TEXT,
+        owner_contact TEXT,
+        photos TEXT,
+        source TEXT,
+        details TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create leads table if it doesn't exist
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS leads (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        property_id INTEGER,
+        tag TEXT,
+        notes TEXT,
+        status TEXT DEFAULT 'active',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (property_id) REFERENCES properties (id)
+      )
+    `);
+
+    console.log('✅ Database tables initialized');
+    return true;
+  } catch (error) {
+    console.error('❌ Database initialization error:', error);
+    return false;
+  }
+}
+
+module.exports = { client, initDatabase };
+
 const client = createClient({
   url: process.env.TURSO_DATABASE_URL || 'file:local.db',
   authToken: process.env.TURSO_AUTH_TOKEN,
