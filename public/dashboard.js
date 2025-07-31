@@ -802,20 +802,22 @@ async function findOffMarketLeads() {
                             <strong>Source:</strong> ${lead.source}
                         </p>
 
-                        ${taxIndicators.length > 0 ? `
+                        ${lead.tax_delinquency_analysis ? `
                         <div class="alert alert-warning p-2 mb-2">
-                            <h6><i class="fas fa-exclamation-triangle"></i> Tax Delinquency Indicators:</h6>
+                            <h6><i class="fas fa-exclamation-triangle"></i> Tax Delinquency Analysis:</h6>
                             <ul class="list-unstyled mb-0 ml-3">
-                                ${taxIndicators.map(indicator => `<li><i class="fas fa-dollar-sign text-warning"></i> ${indicator}</li>`).join('')}
+                                <li><strong>Probability:</strong> ${lead.tax_delinquency_analysis.delinquency_probability || 'Unknown'}</li>
+                                <li><strong>Estimated Back Taxes:</strong> ${lead.tax_delinquency_analysis.estimated_back_taxes || 'TBD'}</li>
+                                <li><strong>Tax Sale Eligible:</strong> ${lead.tax_delinquency_analysis.tax_sale_eligible || 'Unknown'}</li>
                             </ul>
                         </div>
                         ` : ''}
 
-                        ${preForeclosureIndicators.length > 0 ? `
+                        ${(lead.pre_foreclosure_signals && lead.pre_foreclosure_signals.length > 0) ? `
                         <div class="alert alert-danger p-2 mb-2">
                             <h6><i class="fas fa-gavel"></i> Pre-Foreclosure Indicators:</h6>
                             <ul class="list-unstyled mb-0 ml-3">
-                                ${preForeclosureIndicators.map(indicator => `<li><i class="fas fa-ban text-danger"></i> ${indicator}</li>`).join('')}
+                                ${lead.pre_foreclosure_signals.map(indicator => `<li><i class="fas fa-ban text-danger"></i> ${indicator}</li>`).join('')}
                             </ul>
                         </div>
                         ` : ''}
