@@ -3,6 +3,9 @@ const express = require('express');
 const router = express.Router();
 const Groq = require('groq-sdk');
 const GroqClient = require('../utils/groqClient');
+const express = require('express');
+const router = express.Router();
+const { Groq } = require('groq-sdk');
 const client = require('../database/connection');
 
 // Test GROQ API endpoint
@@ -124,33 +127,6 @@ router.post('/hello', async (req, res) => {
 });
 
 module.exports = router;
-const express = require('express');
-const router = express.Router();
-const { createGroqClient } = require('../utils/groqClient');
-
-// Test Groq API connection
-router.get('/groq', async (req, res) => {
-  try {
-    const groq = createGroqClient();
-    
-    const completion = await groq.chat.completions.create({
-      messages: [{ role: "user", content: "Say hello" }],
-      model: "llama3-8b-8192",
-      max_tokens: 50
-    });
-
-    res.json({
-      success: true,
-      response: completion.choices[0]?.message?.content,
-      model: "llama3-8b-8192"
-    });
-  } catch (error) {
-    console.error('Groq test error:', error);
-    res.status(500).json({ 
-      success: false,
-      error: error.message 
-    });
-  }
 });
 
 module.exports = router;
