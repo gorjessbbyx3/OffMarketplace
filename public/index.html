@@ -46,16 +46,29 @@
         
         <!-- Scraping Controls -->
         <div class="search-filters mb-3">
-            <h3>🔍 Hawaii Property Scraper</h3>
-            <p>Scrape fresh property data from Foreclosure.com and OahuRE.com</p>
+            <h3>🤖 AI-Powered Hawaii Property Scraper</h3>
+            <p>AI-powered scraping from OahuRE.com, Foreclosure.com, and Hawaii BOC Database</p>
             <div class="row align-items-center">
-                <div class="col-md-6">
+                <div class="col-md-8">
                     <button class="btn btn-success" onclick="scrapeHawaiiProperties()" id="scrapeBtn">
-                        🌺 Scrape Hawaii Properties
+                        🌺 AI Scrape All Sources
                     </button>
                     <button class="btn btn-info ms-2" onclick="getScrapingStats()">
                         📊 View Stats
                     </button>
+                </div>
+                <div class="col-md-4">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-outline-primary btn-sm" onclick="testAIScraper('oahure')" title="Test OahuRE.com AI Scraper">
+                            🏠 OahuRE
+                        </button>
+                        <button class="btn btn-outline-warning btn-sm" onclick="testAIScraper('foreclosure')" title="Test Foreclosure.com AI Scraper">
+                            🏚️ Foreclosure
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="testAIScraper('boc')" title="Test BOC Database AI Scraper">
+                            📋 BOC DB
+                        </button>
+                    </div>
                 </div>
                 <div class="col-md-6">
                     <div id="scrapingStatus" class="text-muted"></div>

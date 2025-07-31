@@ -1,4 +1,3 @@
-
 // Global variables
 let currentProperties = [];
 let scrapingInProgress = false;
@@ -7,7 +6,7 @@ let scrapingInProgress = false;
 async function scrapeHawaiiProperties() {
     const btn = document.getElementById('scrapeBtn');
     const status = document.getElementById('scrapingStatus');
-    
+
     btn.disabled = true;
     btn.innerHTML = '🔄 Scraping...';
     status.innerHTML = 'Starting scraping process...';
@@ -21,11 +20,11 @@ async function scrapeHawaiiProperties() {
         });
 
         const result = await response.json();
-        
+
         if (response.ok) {
             status.innerHTML = `✅ ${result.message}`;
             alert(`Scraping Complete!\n\nTotal Scraped: ${result.total_scraped}\nNew Properties: ${result.new_properties}\nErrors: ${result.errors}`);
-            
+
             // Refresh the property list
             searchProperties();
         } else {
@@ -42,11 +41,36 @@ async function scrapeHawaiiProperties() {
     }
 }
 
+// Test individual AI scrapers
+async function testAIScraper(source) {
+    const statusDiv = document.getElementById('scrapingStatus');
+    statusDiv.innerHTML = `<div class="text-info">🤖 Testing AI scraper for ${source}...</div>`;
+
+    try {
+        const response = await fetch(`/api/scraper/test-ai-scraper/${source}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            statusDiv.innerHTML = `<div class="text-success">✅ ${result.message}<br>Found ${result.properties_found} properties</div>`;
+            console.log(`${source} properties:`, result.properties);
+        } else {
+            statusDiv.innerHTML = `<div class="text-danger">❌ Error: ${result.error}</div>`;
+        }
+    } catch (error) {
+        console.error('Error testing AI scraper:', error);
+        statusDiv.innerHTML = '<div class="text-danger">❌ Failed to test AI scraper</div>';
+    }
+}
+
 async function getScrapingStats() {
     try {
         const response = await fetch('/api/scraper/stats');
         const stats = await response.json();
-        
+
         if (stats.scraped_sources && stats.scraped_sources.length > 0) {
             let statsText = 'Scraped Property Statistics:\n\n';
             stats.scraped_sources.forEach(source => {
@@ -91,7 +115,7 @@ async function searchProperties() {
         const queryParams = new URLSearchParams(filters);
         const response = await fetch(`/api/properties?${queryParams}`);
         const properties = await response.json();
-        
+
         currentProperties = properties;
         displayProperties(properties);
     } catch (error) {
@@ -103,7 +127,7 @@ async function searchProperties() {
 // Display properties function
 function displayProperties(properties) {
     const propertiesList = document.getElementById('propertiesList');
-    
+
     if (properties.length === 0) {
         propertiesList.innerHTML = '<div class="col-12"><p class="text-center">No properties found matching your criteria.</p></div>';
         return;
@@ -111,7 +135,7 @@ function displayProperties(properties) {
 
     propertiesList.innerHTML = properties.map(property => {
         const aiAnalysis = property.ai_analysis ? JSON.parse(property.ai_analysis) : null;
-        
+
         return `
         <div class="col-md-6 col-lg-4">
             <div class="property-card">
@@ -125,9 +149,9 @@ function displayProperties(properties) {
                         <strong>Status:</strong> ${property.distress_status || 'N/A'}<br>
                         <strong>Source:</strong> ${property.source || 'N/A'}
                     </p>
-                    
+
                     ${property.str_roi ? `<span class="roi-badge">ROI: ${property.str_roi.toFixed(1)}%</span>` : ''}
-                    
+
                     ${aiAnalysis ? `
                         <div class="ai-analysis mt-2">
                             <span class="badge bg-info">AI Score: ${aiAnalysis.opportunity_score || 'N/A'}/100</span>
@@ -135,13 +159,13 @@ function displayProperties(properties) {
                         </div>
                         <small class="text-muted">${aiAnalysis.ai_insights || ''}</small>
                     ` : ''}
-                    
+
                     <div class="mt-3">
                         <button class="btn btn-sm btn-success" onclick="openROICalculator(${property.id})">Calculate ROI</button>
                         <button class="btn btn-sm btn-primary" onclick="addToLeads(${property.id})">Add to Leads</button>
                         ${aiAnalysis ? `<button class="btn btn-sm btn-info" onclick="generatePropertyReport(${property.id})">📊 AI Report</button>` : ''}
                     </div>
-                    
+
                     ${property.owner_contact ? `<small class="text-muted d-block mt-2">Owner: ${property.owner_name} - ${property.owner_contact}</small>` : ''}
                 </div>
             </div>
@@ -176,7 +200,7 @@ async function calculateROI() {
         });
 
         const result = await response.json();
-        
+
         alert(`ROI Calculation Results:
 Annual Revenue: $${result.annual_revenue.toLocaleString()}
 Net Operating Income: $${result.noi.toLocaleString()}
@@ -222,15 +246,15 @@ async function scrapeHawaiiProperties() {
         alert('Scraping already in progress. Please wait...');
         return;
     }
-    
+
     scrapingInProgress = true;
     const scrapeBtn = document.getElementById('scrapeBtn');
     const statusDiv = document.getElementById('scrapingStatus');
-    
+
     scrapeBtn.disabled = true;
     scrapeBtn.innerHTML = '🔄 Scraping...';
     statusDiv.innerHTML = '<div class="text-info">Analyzing Hawaii properties from multiple sources...</div>';
-    
+
     try {
         const response = await fetch('/api/scraper/scrape-hawaii', {
             method: 'POST',
@@ -238,9 +262,9 @@ async function scrapeHawaiiProperties() {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             statusDiv.innerHTML = `<div class="text-success">✅ ${result.message}</div>`;
             // Refresh the properties list
@@ -248,7 +272,7 @@ async function scrapeHawaiiProperties() {
         } else {
             statusDiv.innerHTML = `<div class="text-danger">❌ Error: ${result.error}</div>`;
         }
-        
+
     } catch (error) {
         console.error('Scraping error:', error);
         statusDiv.innerHTML = '<div class="text-danger">❌ Failed to scrape properties</div>';
@@ -264,12 +288,12 @@ async function getScrapingStats() {
     try {
         const response = await fetch('/api/scraper/stats');
         const stats = await response.json();
-        
+
         let statsHtml = '<strong>Scraping Statistics:</strong><br>';
         stats.forEach(stat => {
             statsHtml += `${stat.source}: ${stat.count} properties (${(stat.analysis_rate * 100).toFixed(0)}% analyzed)<br>`;
         });
-        
+
         document.getElementById('scrapingStatus').innerHTML = statsHtml;
     } catch (error) {
         console.error('Error fetching stats:', error);
@@ -282,12 +306,12 @@ async function generatePropertyReport(propertyId) {
         const response = await fetch(`/api/scraper/generate-report/${propertyId}`, {
             method: 'POST'
         });
-        
+
         const report = await response.json();
-        
+
         // Display report in a modal or new window
         showPropertyReport(report);
-        
+
     } catch (error) {
         console.error('Error generating report:', error);
         alert('Failed to generate property report');
@@ -299,7 +323,7 @@ function showPropertyReport(report) {
     const reportContent = `
         <div class="property-report">
             <h3>🏠 Property Investment Report</h3>
-            
+
             <div class="row">
                 <div class="col-md-6">
                     <h5>Property Summary</h5>
@@ -308,7 +332,7 @@ function showPropertyReport(report) {
                     <p><strong>Type:</strong> ${report.property_summary.type}</p>
                     <p><strong>Status:</strong> ${report.property_summary.status || 'N/A'}</p>
                 </div>
-                
+
                 <div class="col-md-6">
                     <h5>AI Investment Analysis</h5>
                     <p><strong>Opportunity Score:</strong> ${report.investment_analysis.opportunity_score}/100</p>
@@ -316,28 +340,28 @@ function showPropertyReport(report) {
                     <p><strong>Investment Score:</strong> ${report.investment_analysis.investment_score}/100</p>
                 </div>
             </div>
-            
+
             <div class="mt-3">
                 <h5>Market Insights</h5>
                 <p>${report.market_insights}</p>
-                
+
                 <h5>AI Recommendations</h5>
                 <p>${report.ai_recommendations}</p>
-                
+
                 ${report.risk_assessment.length > 0 ? `
                     <h5>Risk Factors</h5>
                     <ul>
                         ${report.risk_assessment.map(risk => `<li>${risk}</li>`).join('')}
                     </ul>
                 ` : ''}
-                
+
                 <small class="text-muted">
                     Data Source: ${report.data_sources} | Last Updated: ${new Date(report.last_updated).toLocaleString()}
                 </small>
             </div>
         </div>
     `;
-    
+
     // Create and show modal
     const modal = document.createElement('div');
     modal.className = 'modal fade';
@@ -358,11 +382,11 @@ function showPropertyReport(report) {
             </div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
     const bsModal = new bootstrap.Modal(modal);
     bsModal.show();
-    
+
     // Remove modal from DOM when closed
     modal.addEventListener('hidden.bs.modal', () => {
         modal.remove();

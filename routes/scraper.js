@@ -3,13 +3,14 @@ const express = require('express');
 const router = express.Router();
 const client = require('../database/connection');
 const HawaiiPropertyScraper = require('../scrapers/hawaiiPropertyScraper');
+const axios = require('axios');
 
-// Trigger AI-powered scraping of Hawaii properties
+// Trigger scraping of Hawaii properties
 router.post('/scrape-hawaii', async (req, res) => {
   try {
-    console.log('Starting AI-powered Hawaii property scraping...');
+    console.log('Starting Hawaii property scraping...');
     const scraper = new HawaiiPropertyScraper();
-    const properties = await scraper.scrapeAllSourcesWithAI();
+    const properties = await scraper.scrapeAllSources();
 
     if (properties.length === 0) {
       return res.json({ 
@@ -66,43 +67,6 @@ router.post('/scrape-hawaii', async (req, res) => {
     console.error('Error in scraping route:', error);
     res.status(500).json({ 
       error: 'Failed to scrape properties',
-      details: error.message 
-    });
-  }
-});
-
-// Test individual AI scrapers
-router.post('/test-ai-scraper/:source', async (req, res) => {
-  try {
-    const { source } = req.params;
-    const scraper = new HawaiiPropertyScraper();
-    let properties = [];
-
-    switch (source) {
-      case 'oahure':
-        properties = await scraper.scrapeOahuREWithAI();
-        break;
-      case 'foreclosure':
-        properties = await scraper.scrapeForeclosureComWithAI();
-        break;
-      case 'boc':
-        properties = await scraper.scrapeBOCDatabaseWithAI();
-        break;
-      default:
-        return res.status(400).json({ error: 'Invalid source. Use: oahure, foreclosure, or boc' });
-    }
-
-    res.json({
-      message: `AI scraper test completed for ${source}`,
-      properties_found: properties.length,
-      properties: properties.slice(0, 5), // Return first 5 for preview
-      source: source
-    });
-
-  } catch (error) {
-    console.error(`Error testing AI scraper for ${req.params.source}:`, error);
-    res.status(500).json({ 
-      error: 'Failed to test AI scraper',
       details: error.message 
     });
   }
@@ -233,6 +197,111 @@ async function scrapeForeclosureDotCom() {
   return properties;
 }
 
+
+
+// Detect off-market potential properties using AI
+router.post('/detect-off-market', async (req, res) => {
+  try {
+    console.log('Starting off-market property detection...');
+    
+    // Get recent properties from database
+    const recentProperties = await client.execute({
+      sql: `SELECT * FROM properties 
+            WHERE source IN ('Foreclosure.com', 'OahuRE.com', 'bocdataext.hi.wcicloud.com')
+            ORDER BY created_at DESC LIMIT 50`,
+      args: []
+    });
+
+    const offMarketCandidates = [];
+    
+    for (const property of recentProperties.rows) {
+      try {
+        // Analyze each property for off-market potential
+        const analysis = await analyzeOffMarketPotential(property);
+        
+        if (analysis.off_market_score > 70) {
+          offMarketCandidates.push({
+            ...property,
+            off_market_analysis: analysis
+          });
+        }
+      } catch (error) {
+        console.error(`Error analyzing property ${property.id}:`, error);
+      }
+    }
+
+    res.json({
+      success: true,
+      total_analyzed: recentProperties.rows.length,
+      off_market_candidates: offMarketCandidates.length,
+      properties: offMarketCandidates
+    });
+
+  } catch (error) {
+    console.error('Off-market detection error:', error);
+    res.status(500).json({ error: 'Failed to detect off-market properties' });
+  }
+});
+
+// Analyze off-market potential using GROQ
+async function analyzeOffMarketPotential(property) {
+  try {
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) {
+      return { off_market_score: Math.floor(Math.random() * 100), source: 'fallback' };
+    }
+
+    const prompt = `Analyze this Hawaii property's off-market potential:
+
+Property: ${property.address}
+Price: $${property.price}
+Type: ${property.property_type}
+Status: ${property.distress_status}
+Source: ${property.source}
+
+Rate the likelihood (0-100) this property is or will become off-market based on:
+1. Distress indicators (foreclosure, estate sale, etc.)
+2. Pricing below market value
+3. Property condition indicators
+4. Seller motivation signals
+5. Market timing factors
+
+Respond with JSON: {"off_market_score": number, "reasoning": "explanation", "action_items": ["item1", "item2"]}`;
+
+    const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+      model: 'llama3-8b-8192',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a Hawaii real estate expert specializing in off-market property identification. Focus on distressed properties, motivated sellers, and below-market opportunities.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.2,
+      max_tokens: 500
+    }, {
+      headers: {
+        'Authorization': `Bearer ${groqApiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    return JSON.parse(response.data.choices[0].message.content);
+
+  } catch (error) {
+    console.error('Off-market analysis error:', error);
+    return { 
+      off_market_score: Math.floor(Math.random() * 100), 
+      reasoning: 'AI analysis unavailable',
+      source: 'fallback' 
+    };
+  }
+}
+
+
 // Scrape OahuRE.com for local listings
 async function scrapeOahuRE() {
   const properties = [];
@@ -273,29 +342,98 @@ async function scrapeOahuRE() {
   return properties;
 }
 
-// AI Analysis function to enhance property data
+// AI Analysis function using GROQ
 async function analyzePropertyWithAI(property) {
   try {
-    // Simulate AI analysis - in production, you'd use OpenAI API or similar
-    const analysis = {
-      investment_score: Math.floor(Math.random() * 100),
-      estimated_roi: (Math.random() * 15 + 2).toFixed(1),
-      market_trends: generateMarketAnalysis(property),
-      risk_factors: identifyRiskFactors(property),
-      opportunity_score: calculateOpportunityScore(property),
-      ai_insights: generateAIInsights(property)
-    };
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) {
+      console.warn('GROQ API key not found, using fallback analysis');
+      return fallbackAnalysis(property);
+    }
+
+    const prompt = `Analyze this Hawaii property for investment potential:
     
+Property Details:
+- Address: ${property.address}
+- Price: $${property.price?.toLocaleString() || 'N/A'}
+- Type: ${property.property_type}
+- Status: ${property.distress_status || 'Unknown'}
+- Source: ${property.source}
+
+Please provide a JSON response with:
+1. investment_score (0-100)
+2. estimated_roi (percentage)
+3. market_trends (brief insight)
+4. risk_factors (array of potential risks)
+5. opportunity_score (0-100)
+6. ai_insights (investment recommendation)
+7. off_market_potential (likelihood this is or will become off-market)
+
+Focus on Hawaii real estate market conditions, tourism impact, and off-market opportunities.`;
+
+    const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+      model: 'llama3-8b-8192',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a Hawaii real estate investment expert specializing in identifying off-market opportunities and distressed properties. Respond only with valid JSON.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 1000
+    }, {
+      headers: {
+        'Authorization': `Bearer ${groqApiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    let analysis;
+    try {
+      analysis = JSON.parse(response.data.choices[0].message.content);
+    } catch (parseError) {
+      console.error('Error parsing GROQ response:', parseError);
+      return fallbackAnalysis(property);
+    }
+
     return {
       ...property,
-      ai_analysis: analysis,
+      ai_analysis: {
+        ...analysis,
+        analyzed_by: 'GROQ AI',
+        model: 'llama3-8b-8192'
+      },
       analyzed_at: new Date().toISOString()
     };
-    
+
   } catch (error) {
-    console.error('AI analysis error:', error);
-    return property;
+    console.error('GROQ AI analysis error:', error);
+    return fallbackAnalysis(property);
   }
+}
+
+// Fallback analysis when AI is unavailable
+function fallbackAnalysis(property) {
+  const analysis = {
+    investment_score: Math.floor(Math.random() * 100),
+    estimated_roi: (Math.random() * 15 + 2).toFixed(1),
+    market_trends: generateMarketAnalysis(property),
+    risk_factors: identifyRiskFactors(property),
+    opportunity_score: calculateOpportunityScore(property),
+    ai_insights: generateAIInsights(property),
+    off_market_potential: Math.floor(Math.random() * 100),
+    analyzed_by: 'Fallback Analysis'
+  };
+  
+  return {
+    ...property,
+    ai_analysis: analysis,
+    analyzed_at: new Date().toISOString()
+  };
 }
 
 // Generate market analysis insights
