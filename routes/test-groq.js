@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const Groq = require('groq-sdk');
+const GroqClient = require('../utils/groqClient');
+const client = require('../database/connection');
 
 // Test GROQ API endpoint
 router.get('/hello', async (req, res) => {

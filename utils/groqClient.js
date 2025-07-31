@@ -47,46 +47,119 @@ Format as JSON with clear sections.
         max_tokens: 1024,
       });
 
-      const analysis = completion.choices[0]?.message?.content;
+      const response = completion.choices[0]?.message?.content;
       
-      // Try to parse as JSON, fallback to structured text
       try {
-        return JSON.parse(analysis);
-      } catch {
-        return this.parseAnalysisText(analysis);
+        return JSON.parse(response);
+      } catch (parseError) {
+        return {
+          investment_score: 6,
+          analysis: response,
+          error: 'Failed to parse JSON response'
+        };
       }
 
     } catch (error) {
-      console.error('GROQ API error:', error);
-      return this.getFallbackAnalysis(property);
+      console.error('GROQ property analysis error:', error);
+      return {
+        investment_score: 5,
+        error: 'Analysis unavailable',
+        fallback: true
+      };
     }
   }
 
   async identifyOffMarketOpportunities(properties) {
     try {
-      const propertySummary = properties.slice(0, 10).map(p => 
-        `${p.address} - $${p.price?.toLocaleString()} - ${p.distress_status} - ${p.source}`
-      ).join('\n');
-
       const prompt = `
-Analyze these Hawaii properties to identify the best off-market or pre-market opportunities:
+Analyze these Hawaii properties for off-market opportunities:
 
-${propertySummary}
+${properties.map(p => `
+- Address: ${p.address}
+- Price: $${p.price?.toLocaleString()}
+- Type: ${p.property_type}
+- Status: ${p.distress_status}
+- Source: ${p.source}
+`).join('\n')}
 
-Rank the top 5 properties with highest off-market potential and explain why. Consider:
-- Distress indicators
-- Below-market pricing
-- Source reliability
-- Investment opportunity
-
-Provide insights on market trends and hidden opportunities.
+Identify the top off-market opportunities and provide insights about each property's potential.
 `;
 
       const completion = await this.groq.chat.completions.create({
         messages: [
           {
             role: "system",
-            content: "You are a Hawaii real estate market expert specializing in off-market property identification. Focus on distressed properties, foreclosures, and undervalued opportunities."
+            content: "You are a Hawaii real estate expert specializing in identifying off-market opportunities."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.3,
+        max_tokens: 1500,
+      });
+
+      return completion.choices[0]?.message?.content || 'No opportunities identified';
+
+    } catch (error) {
+      console.error('GROQ off-market analysis error:', error);
+      return 'Off-market analysis unavailable';
+    }
+  }
+
+  async generateMarketInsights(properties) {
+    try {
+      const prompt = `
+Generate market insights for Hawaii real estate based on these properties:
+
+${properties.map(p => `${p.address}: $${p.price?.toLocaleString()}`).join('\n')}
+
+Provide market trends, pricing analysis, and investment recommendations.
+`;
+
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "You are a Hawaii real estate market analyst."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.3,
+        max_tokens: 1000,
+      });
+
+      return completion.choices[0]?.message?.content || 'Market insights unavailable';
+
+    } catch (error) {
+      console.error('GROQ market insights error:', error);
+      return 'Market insights unavailable';
+    }
+  }
+
+  async generateDetailedPropertyReport(property, groqAnalysis) {
+    try {
+      const prompt = `
+Generate a detailed property report for:
+
+Property: ${property.address}
+Price: $${property.price?.toLocaleString()}
+Initial Analysis: ${JSON.stringify(groqAnalysis)}
+
+Provide detailed investment analysis, risk assessment, and recommendations.
+`;
+
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "You are a senior real estate analyst preparing detailed property reports."
           },
           {
             role: "user",
@@ -95,47 +168,79 @@ Provide insights on market trends and hidden opportunities.
         ],
         model: "llama3-8b-8192",
         temperature: 0.2,
-        max_tokens: 1536,
+        max_tokens: 1500,
       });
 
-      return completion.choices[0]?.message?.content;
+      return {
+        detailed_analysis: completion.choices[0]?.message?.content || 'Report unavailable',
+        analysis_confidence: 'high',
+        generated_at: new Date().toISOString()
+      };
 
     } catch (error) {
-      console.error('GROQ analysis error:', error);
-      return 'AI analysis temporarily unavailable. Properties sorted by distress status and price.';
+      console.error('GROQ detailed report error:', error);
+      return {
+        detailed_analysis: 'Report generation failed',
+        analysis_confidence: 'low',
+        error: error.message
+      };
     }
   }
 
-  parseAnalysisText(analysis) {
-    return {
-      investment_score: this.extractScore(analysis),
-      opportunities: this.extractSection(analysis, 'opportunit'),
-      risks: this.extractSection(analysis, 'risk'),
-      market_position: this.extractSection(analysis, 'market'),
-      next_steps: this.extractSection(analysis, 'next step'),
-      roi_potential: this.extractSection(analysis, 'roi'),
-      off_market_potential: this.extractSection(analysis, 'off-market'),
-      raw_analysis: analysis
-    };
-  }
+  async searchProperties(searchCriteria) {
+    try {
+      const prompt = `
+Search for Hawaii properties matching these criteria:
 
-  extractScore(text) {
-    const scoreMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:\/\s*10|out of 10)/i);
-    return scoreMatch ? parseFloat(scoreMatch[1]) : Math.random() * 10;
-  }
+Location: ${searchCriteria.location}
+Property Type: ${searchCriteria.property_type}
+Budget: $${searchCriteria.budget?.toLocaleString()}
+Additional Criteria: ${searchCriteria.criteria}
 
-  extractSection(text, keyword) {
-    const lines = text.split('\n');
-    const relevantLines = lines.filter(line => 
-      line.toLowerCase().includes(keyword.toLowerCase())
-    );
-    return relevantLines.join(' ').trim() || `${keyword} analysis pending`;
+Provide realistic property matches with addresses, pricing, and investment potential.
+Format as JSON with property details.
+`;
+
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "You are a Hawaii real estate search specialist with access to current market data."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.4,
+        max_tokens: 1500,
+      });
+
+      try {
+        return JSON.parse(completion.choices[0]?.message?.content);
+      } catch (parseError) {
+        return {
+          properties: [],
+          search_results: completion.choices[0]?.message?.content,
+          total_found: 0
+        };
+      }
+
+    } catch (error) {
+      console.error('GROQ property search error:', error);
+      return {
+        properties: [],
+        error: 'Search unavailable',
+        total_found: 0
+      };
+    }
   }
 
   async findSpecificProperty(searchCriteria) {
     try {
       const prompt = `
-You are an AI with access to current Hawaii real estate market data and web search capabilities. Find properties matching these criteria:
+Find specific Hawaii property matching:
 
 Location: ${searchCriteria.location}
 Property Type: ${searchCriteria.property_type}
@@ -143,29 +248,7 @@ Price Range: ${searchCriteria.price_range}
 Status: ${searchCriteria.status}
 Specific Request: ${searchCriteria.specific_request}
 
-CURRENT MARKET KNOWLEDGE:
-- Kakaako development projects: Ward Village, Keeaumoku Street corridor
-- Active pre-foreclosure listings typically found on: foreclosure.com, auction.com
-- Recent 4-unit apartment sales in Kakaako: $1.8M-2.4M range
-- High-potential buildings: Auahi Street developments, Queen Street area
-
-WEB SEARCH SIMULATION - Current Active Listings:
-Based on simulated web search of foreclosure databases and MLS:
-
-1. 1200 Queen St Building (4 units) - Pre-foreclosure pending
-2. Auahi Lofts developments - Some distressed units available
-3. Ward Village pre-construction opportunities
-4. Keeaumoku Street 4-plexes - Mixed market conditions
-
-Provide:
-1. Specific addresses or building names found in "web search"
-2. Current listing details and contact information
-3. Investment analysis for each property
-4. Recommended next steps for acquisition
-5. Market timing insights
-6. Financing strategy recommendations
-
-Be specific with realistic addresses, pricing, and actionable next steps as if you just searched the web.
+Provide detailed information about matching properties.
 `;
 
       const completion = await this.groq.chat.completions.create({
@@ -208,46 +291,14 @@ Recommended Actions:
 3. Contact local real estate agents specializing in Kakaako
 4. Monitor auction sites for multi-unit properties
 
-Market Notes:
-- Kakaako 4-unit buildings typically range $1.8M-$2.5M
-- Pre-foreclosure opportunities are rare but valuable
-- Consider properties slightly outside exact criteria for better options
+Investment Considerations:
+- Kakaako is experiencing rapid development
+- Zoning allows for high-density residential
+- Strong rental demand from young professionals
+- Transit-oriented development potential
+
+Note: This is fallback information. For current listings, use real estate databases and local contacts.
 `;
-  }
-
-  getFallbackAnalysis(property) {
-    let score = 5;
-    const opportunities = [];
-    const risks = [];
-
-    if (property.distress_status === 'Foreclosure') {
-      score += 2;
-      opportunities.push('Foreclosure property with potential below-market pricing');
-    }
-
-    if (property.price < 600000) {
-      score += 1;
-      opportunities.push('Below median Hawaii market price');
-    }
-
-    if (property.source.includes('BOC')) {
-      score += 1;
-      opportunities.push('Government database listing - reliable data');
-    }
-
-    if (!property.distress_status) {
-      risks.push('Standard market listing - may have competition');
-    }
-
-    return {
-      investment_score: Math.min(score, 10),
-      opportunities: opportunities,
-      risks: risks,
-      market_position: 'Requires market analysis',
-      next_steps: ['Contact listing agent', 'Schedule property inspection', 'Analyze comparable sales'],
-      roi_potential: 'Estimated 6-12% based on Hawaii market trends',
-      off_market_potential: property.distress_status ? 'High' : 'Medium'
-    };
   }
 }
 

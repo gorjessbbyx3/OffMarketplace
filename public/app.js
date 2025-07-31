@@ -266,13 +266,20 @@ async function getScrapingStats() {
         const stats = await response.json();
         
         let statsHtml = '<strong>Scraping Statistics:</strong><br>';
-        stats.forEach(stat => {
-            statsHtml += `${stat.source}: ${stat.count} properties (${(stat.analysis_rate * 100).toFixed(0)}% analyzed)<br>`;
-        });
+        if (stats.scraped_sources) {
+            stats.scraped_sources.forEach(stat => {
+                const analysisRate = stat.avg_lead_score ? (stat.avg_lead_score / 100) : 0;
+                statsHtml += `${stat.source}: ${stat.count} properties (${(analysisRate * 100).toFixed(0)}% analyzed)<br>`;
+            });
+        } else {
+            statsHtml += 'No scraping data available<br>';
+        }
         
         document.getElementById('scrapingStatus').innerHTML = statsHtml;
     } catch (error) {
-        console.error('Error fetching stats:', error);
+        console.error('Error fetching scraping stats:', error);
+        document.getElementById('scrapingStatus').innerHTML = 'Error loading scraping statistics';
+    }ng stats:', error);
     }
 }
 
