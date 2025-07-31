@@ -97,6 +97,7 @@ async function initDatabase() {
     console.log('Database tables initialized successfully');
   } catch (error) {
     console.error('Error initializing database:', error);
+    throw error; // Re-throw to prevent silent failuresr);
   }
 }
 

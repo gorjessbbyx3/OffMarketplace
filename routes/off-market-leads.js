@@ -288,7 +288,7 @@ function enhanceWithRuleBasedScoring(property, analysis) {
   if (propertyDetails.includes('estate') || propertyDetails.includes('probate') || propertyDetails.includes('deceased')) {
     bonusScore += 20;
     taxDelinquencySignals.push('Estate/probate situation - potential tax complications');
-    additionalIndicators.push('👨‍⚖️ ESTATE/PROBATE - Tax Issues Likely');
+    additionalIndicators.push('👨‍⚖️ ESTATE/PROBATE - Tax Complications Likely');️ ESTATE/PROBATE - Tax Issues Likely');
   }
 
   // Absentee ownership indicators (often leads to tax delinquency)

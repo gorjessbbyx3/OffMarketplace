@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const { client } = require('../database/connection');
@@ -15,7 +14,10 @@ router.get('/', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching leads:', error);
-    res.status(500).json({ error: 'Failed to fetch leads' });
+    res.status(500).json({ 
+      error: 'Failed to fetch leads',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -23,12 +25,12 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { property_id, tag, notes } = req.body;
-    
+
     const result = await client.execute({
       sql: 'INSERT INTO leads (property_id, tag, notes) VALUES (?, ?, ?)',
       args: [property_id, tag, notes]
     });
-    
+
     res.status(201).json({ id: result.lastInsertRowid, message: 'Lead added successfully' });
   } catch (error) {
     console.error('Error adding lead:', error);
@@ -40,55 +42,16 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { status, notes } = req.body;
-    
+
     await client.execute({
       sql: 'UPDATE leads SET status = ?, notes = ? WHERE id = ?',
       args: [status, notes, req.params.id]
     });
-    
+
     res.json({ message: 'Lead updated successfully' });
   } catch (error) {
     console.error('Error updating lead:', error);
     res.status(500).json({ error: 'Failed to update lead' });
-  }
-});
-
-module.exports = router;
-const express = require('express');
-const router = express.Router();
-const { client } = require('../database/connection');
-
-// Get all leads
-router.get('/', async (req, res) => {
-  try {
-    const result = await client.execute(`
-      SELECT l.*, p.address, p.price, p.property_type 
-      FROM leads l 
-      JOIN properties p ON l.property_id = p.id 
-      ORDER BY l.created_at DESC
-    `);
-    
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching leads:', error);
-    res.status(500).json({ error: 'Failed to fetch leads' });
-  }
-});
-
-// Create new lead
-router.post('/', async (req, res) => {
-  try {
-    const { property_id, tag, notes } = req.body;
-    
-    const result = await client.execute({
-      sql: 'INSERT INTO leads (property_id, tag, notes) VALUES (?, ?, ?)',
-      args: [property_id, tag || '', notes || '']
-    });
-    
-    res.json({ success: true, id: result.lastInsertRowid });
-  } catch (error) {
-    console.error('Error creating lead:', error);
-    res.status(500).json({ error: 'Failed to create lead' });
   }
 });
 
