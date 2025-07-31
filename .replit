@@ -11,6 +11,7 @@ deploymentTarget = "gce"
 run = ["sh", "-c", "npm run dev"]
 
 [workflows]
+runButton = "Run"
 
 [[workflows.workflow]]
 name = "Start Server"
@@ -28,6 +29,19 @@ args = "node server.js"
 [[workflows.workflow]]
 name = "Start Server"
 author = 43369170
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node server.js"
+
+[[workflows.workflow]]
+name = "Run"
+author = 45713853
 mode = "sequential"
 
 [[workflows.workflow.tasks]]

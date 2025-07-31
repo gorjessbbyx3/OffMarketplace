@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const client = require('../database/connection');
@@ -104,18 +103,18 @@ router.get('/stats', async (req, res) => {
 router.get('/generate-leads', async (req, res) => {
   try {
     const { min_score = 60, distress_only = false } = req.query;
-    
+
     let sql = `SELECT * FROM properties WHERE lead_score >= ?`;
     let args = [parseInt(min_score)];
-    
+
     if (distress_only === 'true') {
       sql += ` AND distress_status IN ('Pre-foreclosure', 'Foreclosure', 'Potential Distress')`;
     }
-    
+
     sql += ` ORDER BY lead_score DESC, price ASC LIMIT 50`;
-    
+
     const result = await client.execute({ sql, args });
-    
+
     const leads = result.rows.map(property => ({
       id: property.id,
       address: property.address,
@@ -128,13 +127,13 @@ router.get('/generate-leads', async (req, res) => {
       contact_info: property.owner_contact,
       next_action: property.distress_status === 'Pre-foreclosure' ? 'Contact immediately' : 'Research comparable sales'
     }));
-    
+
     res.json({
       total_leads: leads.length,
       high_priority: leads.filter(l => l.lead_score > 80).length,
       leads: leads
     });
-    
+
   } catch (error) {
     console.error('Error generating leads:', error);
     res.status(500).json({ error: 'Failed to generate leads' });
@@ -142,8 +141,6 @@ router.get('/generate-leads', async (req, res) => {
 });
 
 module.exports = router;
-const express = require('express');
-const router = express.Router();
 const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
 const axios = require('axios');
@@ -154,20 +151,20 @@ router.post('/scrape-hawaii', async (req, res) => {
   try {
     console.log('Starting Hawaii property scraping...');
     let scrapedProperties = [];
-    
+
     // Scrape Foreclosure.com
     const foreclosureProperties = await scrapeForeclosureDotCom();
     scrapedProperties = [...scrapedProperties, ...foreclosureProperties];
-    
+
     // Scrape OahuRE.com
     const oahuProperties = await scrapeOahuRE();
     scrapedProperties = [...scrapedProperties, ...oahuProperties];
-    
+
     // AI Analysis for each property
     const analyzedProperties = await Promise.all(
       scrapedProperties.map(property => analyzePropertyWithAI(property))
     );
-    
+
     // Save to database
     let savedCount = 0;
     for (const property of analyzedProperties) {
@@ -178,13 +175,13 @@ router.post('/scrape-hawaii', async (req, res) => {
         console.error('Error saving property:', error);
       }
     }
-    
+
     res.json({
       success: true,
       message: `Scraped and analyzed ${scrapedProperties.length} properties, saved ${savedCount}`,
       properties: analyzedProperties
     });
-    
+
   } catch (error) {
     console.error('Scraping error:', error);
     res.status(500).json({ error: 'Failed to scrape properties' });
@@ -196,16 +193,16 @@ async function scrapeForeclosureDotCom() {
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
   const properties = [];
-  
+
   try {
     // Navigate to Foreclosure.com Hawaii listings
     await page.goto('https://www.foreclosure.com/listing/search.html?state=HI', {
       waitUntil: 'networkidle0'
     });
-    
+
     // Wait for listings to load
     await page.waitForSelector('.property-item', { timeout: 10000 });
-    
+
     const listings = await page.evaluate(() => {
       const items = document.querySelectorAll('.property-item');
       return Array.from(items).slice(0, 20).map(item => {
@@ -213,11 +210,11 @@ async function scrapeForeclosureDotCom() {
         const price = item.querySelector('.price')?.textContent?.trim() || '';
         const details = item.querySelector('.details')?.textContent?.trim() || '';
         const link = item.querySelector('a')?.href || '';
-        
+
         return { address, price, details, link, source: 'Foreclosure.com' };
       });
     });
-    
+
     for (const listing of listings) {
       if (listing.address.includes('HI') && listing.price) {
         properties.push({
@@ -230,13 +227,13 @@ async function scrapeForeclosureDotCom() {
         });
       }
     }
-    
+
   } catch (error) {
     console.error('Error scraping Foreclosure.com:', error);
   } finally {
     await browser.close();
   }
-  
+
   return properties;
 }
 
@@ -246,7 +243,7 @@ async function scrapeForeclosureDotCom() {
 router.post('/detect-off-market', async (req, res) => {
   try {
     console.log('Starting off-market property detection...');
-    
+
     // Get recent properties from database
     const recentProperties = await client.execute({
       sql: `SELECT * FROM properties 
@@ -256,12 +253,12 @@ router.post('/detect-off-market', async (req, res) => {
     });
 
     const offMarketCandidates = [];
-    
+
     for (const property of recentProperties.rows) {
       try {
         // Analyze each property for off-market potential
         const analysis = await analyzeOffMarketPotential(property);
-        
+
         if (analysis.off_market_score > 70) {
           offMarketCandidates.push({
             ...property,
@@ -348,23 +345,23 @@ Respond with JSON: {"off_market_score": number, "reasoning": "explanation", "act
 // Scrape OahuRE.com for local listings
 async function scrapeOahuRE() {
   const properties = [];
-  
+
   try {
     const response = await axios.get('https://www.oahure.com/listings', {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
     });
-    
+
     const $ = cheerio.load(response.data);
-    
+
     $('.property-listing').each((index, element) => {
       if (index < 20) { // Limit to 20 properties
         const address = $(element).find('.property-address').text().trim();
         const price = $(element).find('.property-price').text().trim();
         const type = $(element).find('.property-type').text().trim();
         const description = $(element).find('.property-description').text().trim();
-        
+
         if (address && price) {
           properties.push({
             address,
@@ -377,11 +374,11 @@ async function scrapeOahuRE() {
         }
       }
     });
-    
+
   } catch (error) {
     console.error('Error scraping OahuRE.com:', error);
   }
-  
+
   return properties;
 }
 
@@ -395,7 +392,7 @@ async function analyzePropertyWithAI(property) {
     }
 
     const prompt = `Analyze this Hawaii property for investment potential:
-    
+
 Property Details:
 - Address: ${property.address}
 - Price: $${property.price?.toLocaleString() || 'N/A'}
@@ -471,7 +468,7 @@ function fallbackAnalysis(property) {
     off_market_potential: Math.floor(Math.random() * 100),
     analyzed_by: 'Fallback Analysis'
   };
-  
+
   return {
     ...property,
     ai_analysis: analysis,
@@ -487,37 +484,37 @@ function generateMarketAnalysis(property) {
     'Limited inventory creating seller\'s market',
     'Interest rates affecting buyer purchasing power'
   ];
-  
+
   return trends[Math.floor(Math.random() * trends.length)];
 }
 
 // Identify potential risk factors
 function identifyRiskFactors(property) {
   const risks = [];
-  
+
   if (property.distress_status === 'Foreclosure') {
     risks.push('Property in foreclosure - potential title issues');
   }
-  
+
   if (property.price && property.price < 400000) {
     risks.push('Below market price - investigate condition');
   }
-  
+
   if (property.address.includes('flood')) {
     risks.push('Potential flood zone - check insurance requirements');
   }
-  
+
   return risks;
 }
 
 // Calculate opportunity score based on various factors
 function calculateOpportunityScore(property) {
   let score = 50; // Base score
-  
+
   if (property.distress_status) score += 20;
   if (property.source === 'Foreclosure.com') score += 15;
   if (property.price && property.price < 800000) score += 10;
-  
+
   return Math.min(score, 100);
 }
 
@@ -529,7 +526,7 @@ function generateAIInsights(property) {
     'Market comparables indicate this property may be undervalued',
     'Investment opportunity with estimated cash flow positive potential'
   ];
-  
+
   return insights[Math.floor(Math.random() * insights.length)];
 }
 
@@ -566,7 +563,7 @@ async function savePropertyToDatabase(property) {
     sql: 'SELECT id FROM properties WHERE address = ?',
     args: [property.address]
   });
-  
+
   if (existingProperty.rows.length > 0) {
     // Update existing property with AI analysis
     await client.execute({
@@ -614,7 +611,7 @@ router.get('/stats', async (req, res) => {
       WHERE source IN ('Foreclosure.com', 'OahuRE.com')
       GROUP BY source
     `);
-    
+
     res.json(stats.rows);
   } catch (error) {
     console.error('Error fetching stats:', error);
@@ -629,14 +626,14 @@ router.post('/generate-report/:id', async (req, res) => {
       sql: 'SELECT * FROM properties WHERE id = ?',
       args: [req.params.id]
     });
-    
+
     if (propertyResult.rows.length === 0) {
       return res.status(404).json({ error: 'Property not found' });
     }
-    
+
     const property = propertyResult.rows[0];
     const report = generateDetailedReport(property);
-    
+
     res.json(report);
   } catch (error) {
     console.error('Error generating report:', error);
