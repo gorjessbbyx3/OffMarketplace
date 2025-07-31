@@ -95,11 +95,19 @@ INVESTMENT STRATEGIES:
 - Zoning changes can create significant value opportunities
 
 MARKET SOURCES & TOOLS:
-- foreclosure.com for distressed properties
+- statelegals.staradvertiser.com for official foreclosure legal notices
+- qpublic.schneidercorp.com for Honolulu County property assessments and records
+- foreclosure.com for distressed properties nationwide
 - Hawaii Bureau of Conveyances for ownership records
 - geoportal.hawaii.gov for official zoning and land use data
 - Zillow, Realtor.com for market comps
 - Local MLS access through licensed agents
+
+OFFICIAL HAWAII DATA SOURCES:
+- Star Advertiser Legal Notices: Official foreclosure publications and auction notices
+- Honolulu County Property Records: Tax assessments, TMK numbers, ownership data
+- Hawaii State GIS Portal: Zoning maps, land use regulations, flood zones
+- Bureau of Conveyances: Deed transfers, liens, ownership history
 
 SPECIFIC NEIGHBORHOODS WITH ZONING CONTEXT:
 - Kakaako: A-2/BMX-3 zoning, $600K-2M+ condos, high rental demand, mixed-use development

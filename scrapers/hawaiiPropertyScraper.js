@@ -198,78 +198,157 @@ class HawaiiPropertyScraper {
     }
   }
 
-  // AI-powered scraping of Hawaii BOC Database
-  async scrapeBOCDatabaseWithAI() {
-    console.log('AI-powered scraping of Hawaii BOC Database...');
+  // AI-powered scraping of Hawaii Legal Notices (Star Advertiser)
+  async scrapeHawaiiLegalNotices() {
+    console.log('AI-powered scraping of Hawaii Legal Notices...');
     const browser = await this.initBrowser();
     const page = await browser.newPage();
     
     try {
-      await page.goto('https://bocdataext.hi.wcicloud.com/search.aspx', {
+      await page.goto('https://statelegals.staradvertiser.com/', {
         waitUntil: 'networkidle2',
         timeout: 30000
       });
 
-      // AI-guided form interaction
-      await page.evaluate(() => {
-        // Try to find and interact with search forms
-        const searchInputs = document.querySelectorAll('input[type="text"], input[type="search"]');
-        const submitButtons = document.querySelectorAll('input[type="submit"], button[type="submit"], button');
-        
-        // Fill in Honolulu or Oahu in search fields
-        searchInputs.forEach(input => {
-          if (input.placeholder?.toLowerCase().includes('city') || 
-              input.name?.toLowerCase().includes('city') ||
-              input.id?.toLowerCase().includes('city')) {
-            input.value = 'Honolulu';
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-        });
-        
-        // Click submit if available
-        submitButtons.forEach(button => {
-          if (button.textContent?.toLowerCase().includes('search') ||
-              button.value?.toLowerCase().includes('search')) {
-            button.click();
-          }
-        });
-      });
-
-      // Wait for results
-      await page.waitForTimeout(5000);
-
-      // Extract property data using AI patterns
+      // Look for foreclosure-related legal notices
       const properties = await page.evaluate(() => {
         const results = [];
         
-        // Look for tabular data or structured content
-        const dataElements = document.querySelectorAll('table tr, .result, .record, .property-info, [class*="data"]');
+        // Search for legal notice content
+        const noticeSelectors = [
+          '.legal-notice', '.notice', '.foreclosure', '.auction',
+          '[class*="legal"]', '[class*="notice"]', '.publication',
+          'td', 'tr', '.content', 'article', 'section'
+        ];
         
-        dataElements.forEach((element, index) => {
+        let allElements = [];
+        noticeSelectors.forEach(selector => {
+          const elements = document.querySelectorAll(selector);
+          allElements = [...allElements, ...Array.from(elements)];
+        });
+        
+        allElements.forEach((element, index) => {
+          if (index >= 100) return;
+          
+          const text = element.textContent || '';
+          const lowerText = text.toLowerCase();
+          
+          // Look for foreclosure-related keywords
+          if (lowerText.includes('foreclosure') || 
+              lowerText.includes('auction') || 
+              lowerText.includes('notice of sale') ||
+              lowerText.includes('power of sale') ||
+              lowerText.includes('trustee sale')) {
+            
+            // Extract address from legal notice
+            const addressPattern = /\d+[^,\n]*(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Way|Place|Pl|Circle|Cir|Court|Ct)[^,\n]*(?:,\s*(?:Honolulu|Hawaii|HI))?/gi;
+            const addressMatches = text.match(addressPattern);
+            
+            // Extract auction date
+            const datePattern = /(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}/gi;
+            const dateMatches = text.match(datePattern);
+            
+            // Extract price/amount
+            const pricePattern = /\$[\d,]+(?:\.\d{2})?/g;
+            const priceMatches = text.match(pricePattern);
+            
+            if (addressMatches && addressMatches.length > 0) {
+              const address = addressMatches[0].trim();
+              const price = priceMatches ? Math.max(...priceMatches.map(p => parseInt(p.replace(/[$,]/g, '')))) : null;
+              const auctionDate = dateMatches ? dateMatches[0] : null;
+              
+              if (address.length > 10) {
+                results.push({
+                  address: address,
+                  price: price,
+                  property_type: 'Foreclosure',
+                  distress_status: 'Legal Notice - Foreclosure',
+                  source: 'Hawaii Legal Notices',
+                  details: text.substring(0, 300),
+                  auction_date: auctionDate,
+                  scraped_at: new Date().toISOString()
+                });
+              }
+            }
+          }
+        });
+        
+        return results;
+      });
+
+      console.log(`AI found ${properties.length} legal notice properties`);
+      return properties;
+
+    } catch (error) {
+      console.error('Error in AI scraping legal notices:', error);
+      return [];
+    } finally {
+      await page.close();
+    }
+  }
+
+  // AI-powered scraping of Honolulu County Property Records
+  async scrapeHonoluluCountyRecords() {
+    console.log('AI-powered scraping of Honolulu County Records...');
+    const browser = await this.initBrowser();
+    const page = await browser.newPage();
+    
+    try {
+      await page.goto('https://qpublic.schneidercorp.com/Application.aspx?App=HonoluluCountyHI&PageType=Search', {
+        waitUntil: 'networkidle2',
+        timeout: 30000
+      });
+
+      // Wait for page to load completely
+      await page.waitForTimeout(3000);
+
+      // Perform property search
+      const properties = await page.evaluate(() => {
+        const results = [];
+        
+        // Look for property data in tables and forms
+        const dataSelectors = [
+          'table tr', '.property-row', '.search-result',
+          '[class*="property"]', '[class*="parcel"]', 
+          '.grid-row', '.data-row', 'tbody tr'
+        ];
+        
+        let allElements = [];
+        dataSelectors.forEach(selector => {
+          const elements = document.querySelectorAll(selector);
+          allElements = [...allElements, ...Array.from(elements)];
+        });
+        
+        allElements.forEach((element, index) => {
           if (index >= 50) return;
           
           const text = element.textContent || '';
           
-          // AI pattern matching for property records
+          // Look for property addresses
           const addressPattern = /\d+[^,\n]*(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Way|Place|Pl|Circle|Cir|Court|Ct)[^,\n]*/i;
           const addressMatch = text.match(addressPattern);
           
-          // Look for property values or assessment data
+          // Look for assessment values
           const valuePattern = /\$[\d,]+/g;
           const valueMatches = text.match(valuePattern);
           
-          if (addressMatch && valueMatches) {
+          // Look for parcel ID (TMK)
+          const parcelPattern = /\d-\d-\d{3}-\d{3}/;
+          const parcelMatch = text.match(parcelPattern);
+          
+          if (addressMatch && (valueMatches || parcelMatch)) {
             const address = addressMatch[0].trim();
-            const values = valueMatches.map(v => parseInt(v.replace(/[$,]/g, '')));
-            const maxValue = Math.max(...values);
+            const assessedValue = valueMatches ? Math.max(...valueMatches.map(v => parseInt(v.replace(/[$,]/g, '')))) : null;
+            const tmk = parcelMatch ? parcelMatch[0] : null;
             
-            if (maxValue > 100000 && address.length > 10) {
+            if (address.length > 10 && (assessedValue > 100000 || tmk)) {
               results.push({
                 address: address,
-                price: maxValue,
-                property_type: 'Unknown',
-                distress_status: 'Public Record',
-                source: 'Hawaii BOC Database',
+                price: assessedValue,
+                property_type: 'Assessed Property',
+                distress_status: 'County Record',
+                source: 'Honolulu County Records',
+                tmk: tmk,
                 details: text.substring(0, 200),
                 scraped_at: new Date().toISOString()
               });
@@ -280,11 +359,11 @@ class HawaiiPropertyScraper {
         return results;
       });
 
-      console.log(`AI found ${properties.length} properties in BOC database`);
+      console.log(`AI found ${properties.length} county record properties`);
       return properties;
 
     } catch (error) {
-      console.error('Error in AI scraping BOC database:', error);
+      console.error('Error in AI scraping county records:', error);
       return [];
     } finally {
       await page.close();
@@ -297,14 +376,15 @@ class HawaiiPropertyScraper {
     
     try {
       // Run all scrapers in parallel for efficiency
-      const [oahuProperties, foreclosureProperties, bocProperties] = await Promise.all([
+      const [oahuProperties, foreclosureProperties, legalNoticeProperties, countyProperties] = await Promise.all([
         this.scrapeOahuREWithAI(),
         this.scrapeForeclosureComWithAI(),
-        this.scrapeBOCDatabaseWithAI()
+        this.scrapeHawaiiLegalNotices(),
+        this.scrapeHonoluluCountyRecords()
       ]);
 
       // Combine all results
-      const allProperties = [...oahuProperties, ...foreclosureProperties, ...bocProperties];
+      const allProperties = [...oahuProperties, ...foreclosureProperties, ...legalNoticeProperties, ...countyProperties];
 
       // AI-powered property enhancement with GROQ
       const enhancedProperties = await Promise.all(allProperties.map(async (property) => {
