@@ -92,7 +92,7 @@ class PropertyDashboard {
             const queryParams = new URLSearchParams(filters);
             const response = await fetch(`/api/properties?${queryParams}`);
             const properties = await response.json();
-            
+
             this.displayProperties(properties);
             this.addMessage(`Found ${properties.length} properties matching your search criteria.`, 'ai');
         } catch (error) {
@@ -104,9 +104,9 @@ class PropertyDashboard {
     displayProperties(properties) {
         const container = document.getElementById('propertiesContainer');
         const countBadge = document.getElementById('resultsCount');
-        
+
         countBadge.textContent = `${properties.length} properties`;
-        
+
         if (properties.length === 0) {
             container.innerHTML = `
                 <div class="col-12 text-center text-muted">
@@ -119,7 +119,7 @@ class PropertyDashboard {
 
         container.innerHTML = properties.map(property => {
             const aiAnalysis = property.ai_analysis ? JSON.parse(property.ai_analysis) : null;
-            
+
             return `
                 <div class="col-md-6 col-lg-4">
                     <div class="property-card">
@@ -144,9 +144,9 @@ class PropertyDashboard {
                                 ${property.source || 'N/A'}
                             </div>
                         </div>
-                        
+
                         ${property.str_roi ? `<span class="roi-badge mt-2 d-inline-block">ROI: ${property.str_roi.toFixed(1)}%</span>` : ''}
-                        
+
                         ${aiAnalysis ? `
                             <div class="ai-analysis mt-2">
                                 <span class="badge bg-info">AI Score: ${aiAnalysis.opportunity_score || 'N/A'}/100</span>
@@ -154,7 +154,7 @@ class PropertyDashboard {
                             </div>
                             <small class="text-muted d-block mt-1">${aiAnalysis.ai_insights || ''}</small>
                         ` : ''}
-                        
+
                         <div class="mt-3">
                             <button class="btn btn-sm btn-success" onclick="dashboard.openROICalculator(${property.id})">
                                 <i class="fas fa-calculator"></i> ROI
@@ -175,7 +175,7 @@ class PropertyDashboard {
     openROICalculator(propertyId) {
         const rentalIncome = prompt('Enter monthly rental income ($):');
         const expenses = prompt('Enter annual expenses ($):');
-        
+
         if (rentalIncome && expenses) {
             this.calculateROI(propertyId, rentalIncome, expenses);
         }
@@ -195,7 +195,7 @@ class PropertyDashboard {
             });
 
             const result = await response.json();
-            
+
             this.addMessage(`ROI Calculation Results:
                 Annual Revenue: $${result.annual_revenue.toLocaleString()}
                 Net Operating Income: $${result.noi.toLocaleString()}
@@ -392,7 +392,7 @@ async function generateAILeads() {
     } catch (error) {
         console.error('Error generating leads:', error);
         dashboard.addMessage('Database search had issues, let me search the web for current opportunities...', 'ai');
-        
+
         // Fallback to web search
         try {
             const webSearchResponse = await fetch('/api/search/search-properties', {
@@ -405,10 +405,10 @@ async function generateAILeads() {
                 })
             });
             const webData = await webSearchResponse.json();
-            
+
             if (webData.success) {
                 dashboard.addMessage(`Found current market opportunities through web search! Analyzing ${webData.sources_searched.length} sources including foreclosure.com and Hawaii MLS.`, 'ai');
-                
+
                 // Display web search results
                 const searchResults = document.getElementById('leadsContainer');
                 searchResults.innerHTML = `
@@ -513,9 +513,9 @@ function clearFilters() {
     document.getElementById('maxPrice').value = '';
     document.getElementById('distressStatus').value = '';
     document.getElementById('sourceFilter').value = '';
-    
+
     dashboard.addMessage('Search filters cleared.', 'ai');
-    
+
     // Clear results
     document.getElementById('propertiesContainer').innerHTML = `
         <div class="col-12 text-center text-muted">
@@ -529,7 +529,7 @@ function clearFilters() {
 // Scrape Hawaii properties
 async function scrapeHawaiiProperties() {
     dashboard.addMessage('Starting Hawaii property scraping...', 'ai');
-    
+
     try {
         const response = await fetch('/api/scraper/scrape-hawaii', {
             method: 'POST',
@@ -539,11 +539,11 @@ async function scrapeHawaiiProperties() {
         });
 
         const result = await response.json();
-        
+
         if (result.success) {
             dashboard.addMessage(`Scraping complete! Found ${result.total_scraped} properties with ${result.new_properties} new additions.`, 'ai');
             dashboard.updateStats();
-            
+
             // Auto-refresh search results if filters are applied
             const hasFilters = document.getElementById('zipCode').value || 
                              document.getElementById('propertyType').value || 
@@ -689,4 +689,101 @@ function formatDetailedReport(report) {
         .replace(/$/, '</p>')
         .replace(/(\d+\.\s[A-Z][^:]+:)/g, '<strong>$1</strong>')
         .replace(/(EXECUTIVE SUMMARY|INVESTMENT HIGHLIGHTS|FINANCIAL ANALYSIS|MARKET ANALYSIS|RISK ASSESSMENT|DUE DILIGENCE|RECOMMENDATION)/g, '<h6>$1</h6>');
+}
+
+// Generate leads
+async function generateLeads() {
+    const location = document.getElementById('lead-location').value;
+    const propertyType = document.getElementById('lead-property-type').value;
+    const budget = document.getElementById('lead-budget').value;
+    const goals = document.getElementById('lead-goals').value;
+
+    if (!location || !propertyType || !budget) {
+        alert('Please fill in all required fields');
+        return;
+    }
+
+    try {
+        showLoading(true);
+
+        const response = await fetch('/api/ai/generate-leads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                criteria: { location, propertyType, budget: parseInt(budget), investmentGoals: goals }
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        displayLeads(data.leads || []);
+        displayAiAnalysis(data.aiAnalysis || 'No analysis available');
+
+        // Also search web for additional properties
+        searchWebProperties(location, propertyType, budget);
+
+    } catch (error) {
+        console.error('Error generating leads:', error);
+        alert('Failed to generate leads. Please try again.');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Search web for additional property data
+async function searchWebProperties(location, propertyType, maxPrice) {
+    try {
+        const response = await fetch('/api/search/search-properties', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ location, propertyType, maxPrice })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            displayWebSearchResults(data);
+        }
+    } catch (error) {
+        console.error('Web search error:', error);
+    }
+}
+
+// Display web search results
+function displayWebSearchResults(data) {
+    const webResultsDiv = document.getElementById('web-search-results') || createWebSearchResultsDiv();
+
+    let html = '<h4>Additional Online Properties Found:</h4>';
+    data.searchResults.forEach(source => {
+        html += `<div class="web-source">
+            <h5>${source.source}</h5>`;
+        source.properties.forEach(property => {
+            html += `<div class="web-property">
+                <strong>${property.address}</strong><br>
+                Type: ${property.type}<br>
+                Price: $${property.price?.toLocaleString()}<br>
+                <small>${property.description}</small>
+            </div>`;
+        });
+        html += '</div>';
+    });
+
+    if (data.aiAnalysis) {
+        html += `<div class="web-analysis">
+            <h5>Market Analysis:</h5>
+            <p>${data.aiAnalysis}</p>
+        </div>`;
+    }
+
+    webResultsDiv.innerHTML = html;
+}
+
+function createWebSearchResultsDiv() {
+    const div = document.createElement('div');
+    div.id = 'web-search-results';
+    div.className = 'mt-4';
+    document.getElementById('ai-leads-results').appendChild(div);
+    return div;
 }

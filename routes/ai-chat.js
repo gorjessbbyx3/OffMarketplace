@@ -358,4 +358,55 @@ Keep it concise and actionable for real estate investors.`;
   }
 }
 
+// Chat with AI endpoint
+router.post('/chat', async (req, res) => {
+  try {
+    const { message, context } = req.body;
+
+    // Get relevant property data from database to provide context
+    const propertiesResult = await client.execute('SELECT * FROM properties LIMIT 10');
+    const properties = propertiesResult.rows;
+
+    // Create context with available properties
+    const propertyContext = properties.map(p => 
+      `Property: ${p.address}, Type: ${p.property_type}, Price: $${p.price}, Status: ${p.distress_status}`
+    ).join('\n');
+
+    const groq = new GroqClient();
+    const systemPrompt = `You are a Honolulu real estate expert AI assistant. You have access to the following property database:
+
+${propertyContext}
+
+You help users find off-market properties, analyze investments, and provide market insights for Honolulu, Hawaii. You can:
+1. Search and filter properties by location, type, price, and status
+2. Calculate ROI and rental potential
+3. Provide market analysis and investment advice
+4. Identify distressed properties and investment opportunities
+5. Explain zoning laws and regulations specific to Honolulu
+
+Always provide specific, actionable advice based on the available property data. If you need more specific property information, suggest using the property search filters.`;
+
+    const completion = await groq.chat.completions.create({
+      model: "llama3-8b-8192",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: message }
+      ],
+      temperature: 0.7,
+      max_tokens: 1000
+    });
+
+    const response = {
+      message: completion.choices[0].message.content,
+      context: context || 'property_search',
+      availableProperties: properties.length
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('AI chat error:', error);
+    res.status(500).json({ error: 'Failed to process chat request' });
+  }
+});
+
 module.exports = router;
