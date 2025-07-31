@@ -81,9 +81,11 @@ router.get('/stats', async (req, res) => {
         COUNT(*) as count,
         AVG(price) as avg_price,
         MIN(price) as min_price,
-        MAX(price) as max_price
+        MAX(price) as max_price,
+        AVG(lead_score) as avg_lead_score,
+        COUNT(CASE WHEN distress_status IN ('Pre-foreclosure', 'Foreclosure') THEN 1 END) as distressed_count
       FROM properties 
-      WHERE source IN ('Foreclosure.com', 'OahuRE.com')
+      WHERE source IN ('Foreclosure.com', 'OahuRE.com', 'BOC Data')
       GROUP BY source`,
       args: []
     });
@@ -95,6 +97,47 @@ router.get('/stats', async (req, res) => {
   } catch (error) {
     console.error('Error getting scraper stats:', error);
     res.status(500).json({ error: 'Failed to get scraper stats' });
+  }
+});
+
+// Generate leads from scraped properties
+router.get('/generate-leads', async (req, res) => {
+  try {
+    const { min_score = 60, distress_only = false } = req.query;
+    
+    let sql = `SELECT * FROM properties WHERE lead_score >= ?`;
+    let args = [parseInt(min_score)];
+    
+    if (distress_only === 'true') {
+      sql += ` AND distress_status IN ('Pre-foreclosure', 'Foreclosure', 'Potential Distress')`;
+    }
+    
+    sql += ` ORDER BY lead_score DESC, price ASC LIMIT 50`;
+    
+    const result = await client.execute({ sql, args });
+    
+    const leads = result.rows.map(property => ({
+      id: property.id,
+      address: property.address,
+      price: property.price,
+      lead_score: property.lead_score,
+      distress_status: property.distress_status,
+      source: property.source,
+      urgency: property.urgency,
+      estimated_equity: property.price ? Math.floor(property.price * 0.2) : null,
+      contact_info: property.owner_contact,
+      next_action: property.distress_status === 'Pre-foreclosure' ? 'Contact immediately' : 'Research comparable sales'
+    }));
+    
+    res.json({
+      total_leads: leads.length,
+      high_priority: leads.filter(l => l.lead_score > 80).length,
+      leads: leads
+    });
+    
+  } catch (error) {
+    console.error('Error generating leads:', error);
+    res.status(500).json({ error: 'Failed to generate leads' });
   }
 });
 

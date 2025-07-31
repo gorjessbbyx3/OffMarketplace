@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -18,9 +17,10 @@ const leadRoutes = require('./routes/leads');
 const scraperRoutes = require('./routes/scraper');
 
 // Use routes
-app.use('/api/properties', propertyRoutes);
-app.use('/api/leads', leadRoutes);
-app.use('/api/scraper', scraperRoutes);
+app.use('/api/scraper', require('./routes/scraper'));
+app.use('/api/properties', require('./routes/properties'));
+app.use('/api/leads', require('./routes/leads'));
+app.use('/api/ai', require('./routes/ai-analysis'));
 
 // Serve React app
 app.get('*', (req, res) => {
