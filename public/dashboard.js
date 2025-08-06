@@ -86,12 +86,24 @@ class PropertyDashboard {
             zipValue = '';
         }
 
+        // Parse price range
+        const priceRange = document.getElementById('priceRange').value;
+        let minPrice = '', maxPrice = '';
+        if (priceRange) {
+            const [min, max] = priceRange.split('-');
+            minPrice = min;
+            maxPrice = max;
+        }
+
         const filters = {
             zip: zipValue,
             property_type: document.getElementById('propertyType').value,
-            max_price: document.getElementById('maxPrice').value,
-            distress_status: document.getElementById('distressStatus').value,
-            source: document.getElementById('sourceFilter').value
+            min_price: minPrice,
+            max_price: maxPrice,
+            investment_strategy: document.getElementById('investmentStrategy').value,
+            distress_level: document.getElementById('distressLevel').value,
+            min_roi: document.getElementById('minROI').value,
+            urgency_level: document.getElementById('urgencyLevel').value
         };
 
         // Remove empty filters
@@ -1063,6 +1075,89 @@ if (!resultsDiv) {
 
             resultsDiv.appendChild(card);
         });
+    }
+}
+
+// Consolidated function for finding off-market opportunities
+async function findOffMarketOpportunities() {
+    dashboard.addMessage('🎯 Analyzing all available data sources for off-market opportunities...', 'ai');
+
+    try {
+        // Combine both off-market lead finding approaches
+        const response = await fetch('/api/off-market-leads/find-comprehensive-opportunities', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.opportunities && data.opportunities.length > 0) {
+            dashboard.displayOffMarketLeads(data.opportunities);
+            dashboard.addMessage(`🎯 Found ${data.opportunities.length} high-potential opportunities! Analyzed ${data.total_analyzed} properties across ${data.sources_analyzed} sources.`, 'ai');
+        } else {
+            dashboard.addMessage('No high-potential opportunities found in current data. Try scraping new properties first.', 'ai');
+        }
+
+    } catch (error) {
+        console.error('Off-market opportunities error:', error);
+        dashboard.addMessage('Error finding opportunities. Please try again.', 'ai');
+    }
+}
+
+// Consolidated function for generating comprehensive reports
+async function generateComprehensiveReports() {
+    dashboard.addMessage('🤖 Generating comprehensive AI analysis reports using GROQ + Anthropic...', 'ai');
+
+    try {
+        const response = await fetch('/api/ai/generate-comprehensive-reports', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            displayDetailedReports(data);
+            dashboard.addMessage(`✅ Generated ${data.successful_analyses} comprehensive reports with dual AI analysis.`, 'ai');
+        } else {
+            dashboard.addMessage('❌ Failed to generate comprehensive reports', 'ai');
+        }
+
+    } catch (error) {
+        console.error('Error generating reports:', error);
+        dashboard.addMessage('❌ Error generating reports - check API configuration', 'ai');
+    }
+}
+
+// Consolidated function for market insights
+async function getMarketInsights() {
+    dashboard.addMessage('📊 Analyzing current market trends and investment insights...', 'ai');
+
+    try {
+        const response = await fetch('/api/ai/comprehensive-market-analysis', {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            dashboard.addMessage(data.market_insights, 'ai');
+            
+            // Also show trending opportunities if available
+            if (data.trending_opportunities && data.trending_opportunities.length > 0) {
+                dashboard.displayProperties(data.trending_opportunities);
+            }
+        } else {
+            dashboard.addMessage(data.message, 'ai');
+        }
+
+    } catch (error) {
+        console.error('Market insights error:', error);
+        dashboard.addMessage('Unable to generate market insights. Please try again.', 'ai');
     }
 }
 

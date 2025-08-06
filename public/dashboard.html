@@ -393,23 +393,14 @@ The goal is to add a new button "View Database" to the quick actions section in 
                 <div class="quick-actions">
                     <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
                     <div class="d-grid gap-2">
-                        <button class="btn btn-primary" onclick="generateAILeads()">
-                            <i class="fas fa-magic"></i> Generate AI Leads
+                        <button class="btn btn-primary" onclick="findOffMarketOpportunities()">
+                            <i class="fas fa-target"></i> Find Off-Market Opportunities
                         </button>
-                        <button class="btn btn-success" onclick="findShortTermRentalProperties()">
-                            <i class="fas fa-search"></i> Find STR Properties
+                        <button class="btn btn-success" onclick="generateComprehensiveReports()">
+                            <i class="fas fa-chart-line"></i> Generate AI Analysis Reports
                         </button>
-                        <button class="btn btn-info" onclick="getMarketAnalysis()">
-                            <i class="fas fa-chart-line"></i> Market Analysis
-                        </button>
-                        <button class="btn btn-warning" onclick="generateDetailedReports()">
-                            <i class="fas fa-file-alt"></i> Detailed Reports
-                        </button>
-                        <button class="btn btn-danger" onclick="findOffMarketLeads()">
-                            <i class="fas fa-eye-slash"></i> Find Off-Market Leads
-                        </button>
-                        <button class="btn btn-secondary" onclick="findOffMarketProperties()">
-                            <i class="fas fa-home"></i> Find Off-Market Properties
+                        <button class="btn btn-info" onclick="getMarketInsights()">
+                            <i class="fas fa-lightbulb"></i> Market Insights & Trends
                         </button>
                         <button class="btn btn-outline-primary" onclick="viewScrapedProperties()">
                             <i class="fas fa-database"></i> View Scraped Properties
@@ -487,65 +478,101 @@ The goal is to add a new button "View Database" to the quick actions section in 
                     </div>
                     <div class="p-3">
                         <div class="row">
-                            <div class="col-md-6">
-                                <label for="zipCode" class="form-label">Zip Code</label>
+                            <div class="col-md-4">
+                                <label for="zipCode" class="form-label">Location</label>
                                 <select class="form-select" id="zipCode" onchange="handleZipCodeChange()">
-                                    <option value="">All Zip Codes</option>
-                                    <option value="96814">96814 (Kakaako)</option>
-                                    <option value="96815">96815 (Waikiki)</option>
-                                    <option value="96826">96826 (Hawaii Kai)</option>
-                                    <option value="96813">96813 (Downtown)</option>
-                                    <option value="96817">96817 (Kalihi)</option>
-                                    <option value="96816">96816 (Kaimuki)</option>
-                                    <option value="96818">96818 (Pearl City)</option>
-                                    <option value="96819">96819 (Aiea)</option>
-                                    <option value="96825">96825 (Hawaii Kai)</option>
+                                    <option value="">All Locations</option>
+                                    <optgroup label="Honolulu Urban Core">
+                                        <option value="96814">96814 (Kakaako)</option>
+                                        <option value="96815">96815 (Waikiki)</option>
+                                        <option value="96813">96813 (Downtown)</option>
+                                        <option value="96816">96816 (Kaimuki)</option>
+                                    </optgroup>
+                                    <optgroup label="East Honolulu">
+                                        <option value="96826">96826 (Hawaii Kai)</option>
+                                        <option value="96825">96825 (Hawaii Kai)</option>
+                                        <option value="96821">96821 (Aina Haina)</option>
+                                    </optgroup>
+                                    <optgroup label="West/Central">
+                                        <option value="96817">96817 (Kalihi)</option>
+                                        <option value="96818">96818 (Pearl City)</option>
+                                        <option value="96819">96819 (Aiea)</option>
+                                    </optgroup>
                                     <option value="custom">Enter Custom Zip Code</option>
                                 </select>
                                 <input type="text" class="form-control mt-2" id="customZipCode" placeholder="Enter zip code (e.g. 96822)" style="display: none;" maxlength="5" pattern="[0-9]{5}">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label for="propertyType" class="form-label">Property Type</label>
                                 <select class="form-select" id="propertyType">
                                     <option value="">All Types</option>
-                                    <option value="Single-family">Single-family</option>
-                                    <option value="Multi-family">Multi-family</option>
-                                    <option value="Condo">Condo</option>
-                                    <option value="Commercial">Commercial</option>
-                                    <option value="Land">Land</option>
+                                    <option value="Single-family">Single-family Home</option>
+                                    <option value="Multi-family">Multi-family (2-4 units)</option>
+                                    <option value="Condo">Condominium</option>
+                                    <option value="Townhouse">Townhouse</option>
+                                    <option value="Commercial">Commercial Property</option>
+                                    <option value="Land">Vacant Land</option>
+                                    <option value="Mixed-use">Mixed-use Building</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="investmentStrategy" class="form-label">Investment Strategy</label>
+                                <select class="form-select" id="investmentStrategy">
+                                    <option value="">Any Strategy</option>
+                                    <option value="buy-hold">Buy & Hold Rental</option>
+                                    <option value="short-term-rental">Short-term Rental (Airbnb)</option>
+                                    <option value="fix-flip">Fix & Flip</option>
+                                    <option value="wholesale">Wholesale Opportunity</option>
+                                    <option value="commercial">Commercial Investment</option>
+                                    <option value="development">Development/Subdivision</option>
                                 </select>
                             </div>
                         </div>
                         <div class="row mt-3">
-                            <div class="col-md-4">
-                                <label for="maxPrice" class="form-label">Max Price</label>
-                                <select class="form-select" id="maxPrice">
-                                    <option value="">No Limit</option>
-                                    <option value="500000">$500K</option>
-                                    <option value="1000000">$1M</option>
-                                    <option value="2000000">$2M</option>
-                                    <option value="4000000">$4M</option>
+                            <div class="col-md-3">
+                                <label for="priceRange" class="form-label">Price Range</label>
+                                <select class="form-select" id="priceRange">
+                                    <option value="">Any Price</option>
+                                    <option value="0-500000">Under $500K</option>
+                                    <option value="500000-750000">$500K - $750K</option>
+                                    <option value="750000-1000000">$750K - $1M</option>
+                                    <option value="1000000-1500000">$1M - $1.5M</option>
+                                    <option value="1500000-2000000">$1.5M - $2M</option>
+                                    <option value="2000000-99999999">$2M+</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
-                                <label for="distressStatus" class="form-label">Distress Status</label>
-                                <select class="form-select" id="distressStatus">
-                                    <option value="">All Status</option>
-                                    <option value="Pre-foreclosure">Pre-foreclosure</option>
-                                    <option value="Short Sale">Short Sale</option>
-                                    <option value="Vacant">Vacant</option>
-                                    <option value="Estate Sale">Estate Sale</option>
-                                    <option value="Foreclosure">Foreclosure</option>
+                            <div class="col-md-3">
+                                <label for="distressLevel" class="form-label">Opportunity Type</label>
+                                <select class="form-select" id="distressLevel">
+                                    <option value="">All Opportunities</option>
+                                    <option value="pre-foreclosure">Pre-foreclosure</option>
+                                    <option value="foreclosure">Foreclosure Auction</option>
+                                    <option value="tax-delinquent">Tax Delinquent</option>
+                                    <option value="estate-sale">Estate/Probate Sale</option>
+                                    <option value="vacant">Vacant Property</option>
+                                    <option value="short-sale">Short Sale</option>
+                                    <option value="reo">Bank Owned (REO)</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
-                                <label for="sourceFilter" class="form-label">Source</label>
-                                <select class="form-select" id="sourceFilter">
-                                    <option value="">All Sources</option>
-                                    <option value="Foreclosure.com">Foreclosure.com</option>
-                                    <option value="OahuRE.com">OahuRE.com</option>
-                                    <option value="PropStream">PropStream</option>
-                                    <option value="MLS">MLS</option>
+                            <div class="col-md-3">
+                                <label for="minROI" class="form-label">Minimum ROI</label>
+                                <select class="form-select" id="minROI">
+                                    <option value="">Any ROI</option>
+                                    <option value="5">5%+ ROI</option>
+                                    <option value="8">8%+ ROI</option>
+                                    <option value="10">10%+ ROI</option>
+                                    <option value="12">12%+ ROI</option>
+                                    <option value="15">15%+ ROI</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="urgencyLevel" class="form-label">Urgency Level</label>
+                                <select class="form-select" id="urgencyLevel">
+                                    <option value="">Any Urgency</option>
+                                    <option value="critical">Critical (Action Needed)</option>
+                                    <option value="high">High Priority</option>
+                                    <option value="medium">Medium Priority</option>
+                                    <option value="low">Low Priority</option>
                                 </select>
                             </div>
                         </div>
